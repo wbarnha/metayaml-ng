@@ -1,0 +1,10 @@
+f1: test_f1
+
+main:
+  test_f1: true
+  all:
+    f1: true
+  test1:
+    - v3
+
+test_path: ${join("a", "b", "c")}$
