@@ -161,10 +161,6 @@ class MetaYaml(object):
         return a
 
 
-def read(yaml_file):
-    m = MetaYaml(yaml_file)
+def read(yaml_file, defaults=None, extend_key_word="extend"):
+    m = MetaYaml(yaml_file, defaults, extend_key_word)
     return m.data
-
-
-if __name__ == '__main__':
-    my = MetaYaml(os.path.join("test_files", "large.yaml"), {"CWD": os.getcwd(), "join": os.path.join})
