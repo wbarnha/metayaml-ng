@@ -8,3 +8,5 @@ main:
     - v3
 
 test_path: ${join("a", "b", "c")}$
+
+test_lazy_template: $(f3*3)  # f3 is declared in f3.yaml file
