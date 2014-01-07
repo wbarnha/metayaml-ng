@@ -8,8 +8,6 @@ from metayaml import MetaYaml, MetaYamlException
 class TestMetaYaml(TestCase):
     def test_myaml(self):
         my = MetaYaml(os.path.join("test_files", "test.yaml"), {"CWD": os.getcwd(), "join": os.path.join})
-        import pprint
-        pprint.pprint(my.data)
         d = AttrDict(my.data)
         self.assertIn("v1", d.main.test1)
         self.assertIn("v3", d.main.test1)
