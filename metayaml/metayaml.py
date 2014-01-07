@@ -30,12 +30,20 @@ class MetaYaml(object):
         #self.data = AttrDict(defaults or {})
         self.data = defaults or {}
 
-        if os.path.abspath(yaml_file):
-            self._current_dir = os.path.dirname(yaml_file)
-            yaml_file = os.path.basename(yaml_file)
+        if isinstance(yaml_file, basestring):
+            yaml_file = [yaml_file]
         else:
-            self._current_dir = ""
-        self.load(yaml_file, self.data)
+            assert isinstance(yaml_file, list)
+            assert all(isinstance(f, basestring) for f in yaml_file)
+
+        for filename in yaml_file:
+            if os.path.abspath(filename):
+                self._current_dir = os.path.dirname(filename)
+                filename = os.path.basename(filename)
+            else:
+                self._current_dir = ""
+            self.load(filename, self.data)
+
         self.substitute(self.data, self.data, "", False)
 
     def find_path(self, path):
@@ -50,12 +58,13 @@ class MetaYaml(object):
         with open(path, "rb") as f:
             file_data = yaml.load(f, Loader=Loader)
 
-        data[self._extend_key_word] = None
-        self._merge(data, file_data)
-        self.substitute(data, data, "", eager=True)
-        extends = data.get(self._extend_key_word)
+        data[self._extend_key_word] = file_data.get(self._extend_key_word, [])
+        self.substitute(data[self._extend_key_word], data, "", eager=True)
+
+        extends = data[self._extend_key_word]
 
         if extends:
+            self.substitute(data, data, "", eager=True)
             if isinstance(extends, basestring):
                 extends = [extends]
             if not isinstance(extends, list):
@@ -69,6 +78,10 @@ class MetaYaml(object):
                     self.load(file_name, data)
                 except IOError as e:
                     raise FileNotFound("Open file %s error from %s: %s" % (file_name, path, e))
+
+        self._merge(data, file_data)
+        self.substitute(data, data, "", eager=True)
+
         return data
 
     def substitute(self, value, data, path, eager):

@@ -1,0 +1,5 @@
+extend:
+  - f2.yaml
+
+test_math: ${10*60*2.5}
+f3: 33
