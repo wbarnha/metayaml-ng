@@ -13,5 +13,5 @@ setup(
     extras_require={
         'test': ['attrdict'],
     },
-    include_package_data=True
+    include_package_data=True,
 )

@@ -4,16 +4,112 @@ Meta Yaml
 
 Mata Yaml is several enhancements for yaml format that allow the following:
 
-* include one yaml file to another
-* use python expression as value
+* include one yaml file from another
+* use python expression and other fields in the file as value
 
-Example:
---------
+Include files syntax
+--------------------
 
-main.yaml ::
+To include one file or files the '**extend**' key is used. For example:
 
-  a: 1
-  b: 2
+**base.yaml**::
+
+ extend:
+   - file1.yaml
+   - file2.yaml
+ name: base.yaml
+ b: overridden_by_base
+ new: new
+
+**file1.yaml**::
+
+  a: a
+  b: b
+  c: c
+  name: file1.yaml
+
+**file2.yaml**::
+
+  a: aa
+  b: bb
+  d: d
+  name: file2.yaml
+
+The order and sequence of file processing is shown in the following table:
+
+
+=====  =============================================  ======================================================
+ Step   Action                                         Intermediate dict
+=====  =============================================  ======================================================
+1      Read base.yaml and extract extend key          ::
+
+                                                       {"extend":
+                                                           ["file1.yaml", "file2.yaml"] }
+
+2      Read file1.yaml                                ::
+
+                                                       {
+                                                          "a": "a",
+                                                          "b": "b",
+                                                          "c": "c",
+                                                          "name": "file1.yaml"
+                                                       }
+3      Read file2.yaml and merge/override values      ::
+
+                                                       {
+                                                          "a": "aa", # overridden
+                                                          "b": "b",  # overridden
+                                                          "c": "c",
+                                                          "d": "d",  # added
+                                                          "name": "file2.yaml" # overridden
+                                                       }
+
+4      Read rest values from base.yaml and            ::
+       merge/override
+                                                       {
+                                                          "a": "aa",
+                                                          "b": "overridden_by_base",  # overridden
+                                                          "c": "c",
+                                                          "d": "d",
+                                                          "name": "base.yaml" # overridden
+                                                          "new": "new" # added
+                                                       }
+=====  =============================================  ======================================================
+
+Expression syntax
+-----------------
+
+Metayaml support any python valid expression. For this expression should be enclosed in brackets ${} or $(). The first brackets is used for eager substitute and $() for laze. I.e. expressions in $() are applied after full read file and its include files but ${} during file read.
+
+The access to other values from expression can be done by using dictionary syntax or 'dash dictionary syntax'.
+
+**Examples**:
+
+**base.yaml** ::
+
+ extend:
+   - f1.yaml
+
+ hour: ${60*60}  # just simple python expression
+ ${2+2}: four  # expression can be in the key
+ delay: ${hour*2}  # delay is two hour or 7200 seconds
+ loggers:
+   metayaml:
+     name: metayaml
+     level: debug
+     console: false
+   backend:
+     name: backend
+     level: ${loggers.metayaml.level}
+     console: ${loggers.metayaml.console}
+   ext: ${loggers.metayaml}  # copy whole dict from loggers.metayaml this key
+
+   incorrect: ${delay} ${loggers.ext}  # In this case string representation of objects will be concatenated
+
+**f1.yaml** ::
+
+  run_interval: $(hour*5)  # 5 hours. But 'hour' is not defined when this file is processed.
+                           # Therefore only $() brackets can be used here.
 
 Installation
 ============
@@ -35,89 +131,31 @@ https://bitbucket.org/atagunov/metayaml
 
 Usage
 =====
-Creation
---------
-An empty AttrDict can be created with::
+::
 
-    a = AttrDict()
+ from metayaml import read
+ read(["config.yaml",
+       "test.yaml",
+      {'join': os.path.join, # allows get right os specific path in yaml file
+       'env': os.environ}  # allows use system environments from yaml file
+     )
 
-Or, you can pass an existing dict (or other type of Mapping object)::
+**config.yaml** ::
 
-    a = AttrDict({'foo': 'bar'})
+ extend:
+   - ${join(env["HOME"], ".metayaml", "localconfig.yaml")} # added reading local config from $HOME
+ user_name: ${env["USER"]}
+ email: ${user_name + "@example.com"}
+ debug: false
 
-NOTE: Unlike dict, AttrDict will not clone on creation. AttrDict's
-internal dict will be the same instance as the dict passed in.
 
-Access
-------
-AttrDict can be used *exactly* like a normal dict::
+**test.yaml** ::
 
-    > a = AttrDict()
-    > a['foo'] = 'bar'
-    > a['foo']
-    'bar'
-    > '{foo}'.format(**a)
-    'bar'
-    > del a['foo']
-    > a.get('foo', 'default')
-    'default'
+ debug: true
 
-AttrDict can also have it's keys manipulated as attributes to the object::
 
-    > a = AttrDict()
-    > a.foo = 'bar'
-    > a.foo
-    'bar'
-    > del a.foo
 
-Both methods operate on the same underlying object, so operations are
-interchangeable. The only difference between the two methods is that
-where dict-style access would return a dict, attribute-style access will
-return an AttrDict. This allows recursive attribute-style access::
-
-    > a = AttrDict({'foo': {'bar': 'baz'}})
-    > a.foo.bar
-    'baz'
-    > a['foo'].bar
-    AttributeError: 'dict' object has no attribute 'bar'
-
-There are some valid keys that cannot be accessed as attributes. To be
-accessed as an attribute, a key must:
-
- * be a string
-
- * start with an alphabetic character
-
- * be comprised solely of alphanumeric characters and underscores
-
- * not map to an existing attribute name (e.g., get, items)
-
-To access these attributes while retaining an AttrDict wrapper (or to
-dynamically access any key as an attribute)::
-
-    > a = AttrDict({'_foo': {'bar': 'baz'}})
-    > a('_foo').bar
-    'baz'
-
-Merging
--------
-AttrDicts can be merged with eachother or other dict objects using the
-+ operator. For conflicting keys, the right dict's value will be
-preferred, but in the case of two dictionary values, they will be
-recursively merged::
-
-    > a = {'foo': 'bar', 'alpha': {'beta': 'a', 'a': 'a'}}
-    > b = {'lorem': 'ipsum', 'alpha': {'bravo': 'b', 'a': 'b'}}
-    > AttrDict(a) + b
-    {'foo': 'bar', 'lorem': 'ipsum', 'alpha': {'beta': 'a', 'bravo': 'b', 'a': 'b'}}
-
-NOTE: AttrDict's add is not idempotent, a + b != b + a::
-
-    > a = {'foo': 'bar', 'alpha': {'beta': 'b', 'a': 0}}
-    > b = {'lorem': 'ipsum', 'alpha': {'bravo': 'b', 'a': 1}}
-    > b + AttrDict(a)
-    {'foo': 'bar', 'lorem':             'ipsum', 'alpha': {'beta': 'a', 'bravo': 'b', 'a': }}
 
 License
 =======
-AttrDict is released under a MIT license.
+MetaYaml is released under a MIT license.

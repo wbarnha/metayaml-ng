@@ -1,7 +1,7 @@
 import os
 import jinja2
 import yaml
-from collections import Mapping
+from collections import Mapping, defaultdict
 
 try:
     from yaml import CLoader as Loader
@@ -24,11 +24,13 @@ def _to_str(value):
 
 
 class MetaYaml(object):
+    eager_brackets = "${", "}"
+    lazy_brackets = "$(", ")"
+
     def __init__(self, yaml_file, defaults=None, extend_key_word="extend"):
         self._extend_key_word = extend_key_word
-        self.defaults = defaults
-        #self.data = AttrDict(defaults or {})
-        self.data = defaults or {}
+        self.data = defaults.copy() or {}
+        self.cache_template = defaultdict(lambda: {})
 
         if isinstance(yaml_file, basestring):
             yaml_file = [yaml_file]
@@ -44,7 +46,7 @@ class MetaYaml(object):
                 self._current_dir = ""
             self.load(filename, self.data)
 
-        self.substitute(self.data, self.data, "", False)
+        self.substitute(self.data, self.data, [os.path.basename(filename)], False)
 
     def find_path(self, path):
         if os.path.isabs(path):
@@ -54,17 +56,18 @@ class MetaYaml(object):
 
     def load(self, path, data):
         path = self.find_path(path)
+        basename = [os.path.basename(path)]
 
         with open(path, "rb") as f:
             file_data = yaml.load(f, Loader=Loader)
 
         data[self._extend_key_word] = file_data.get(self._extend_key_word, [])
-        self.substitute(data[self._extend_key_word], data, "", eager=True)
+        self.substitute(data[self._extend_key_word], data, basename, eager=True)
 
         extends = data[self._extend_key_word]
 
         if extends:
-            self.substitute(data, data, "", eager=True)
+            self.substitute(data, data, basename, eager=True)
             if isinstance(extends, basestring):
                 extends = [extends]
             if not isinstance(extends, list):
@@ -80,7 +83,7 @@ class MetaYaml(object):
                     raise FileNotFound("Open file %s error from %s: %s" % (file_name, path, e))
 
         self._merge(data, file_data)
-        self.substitute(data, data, "", eager=True)
+        self.substitute(data, data, basename, eager=True)
 
         return data
 
@@ -88,10 +91,11 @@ class MetaYaml(object):
         path = path or []
         if isinstance(value, Mapping):
             for key, val in value.iteritems():
-                new_key = self.eval_value(key, path + [_to_str(key)], data, eager)
+                new_path = path + [_to_str(key)]
+                new_key = self.eval_value(key, new_path, data, eager)
                 if new_key != key:
                     del value[key]
-                value[new_key] = self.substitute(val, data, path + [_to_str(key)], eager)
+                value[new_key] = self.substitute(val, data, new_path, eager)
         elif isinstance(value, list):
             for key in xrange(len(value)):
                 value[key] = self.substitute(value[key], data, path + [_to_str(key)], eager)
@@ -114,31 +118,24 @@ class MetaYaml(object):
             s = s[1:]
         return s
 
-    @staticmethod
-    def eager_template(template):
-        return jinja2.Template(template, variable_start_string="${", variable_end_string="}", optimized=False)
-
-    @staticmethod
-    def lazy_template(template):
-        return jinja2.Template(template, variable_start_string="$(", variable_end_string=")", optimized=False)
-
     def eval_value(self, val, path, data, eager):
         if not isinstance(val, basestring):
             return val
-        if "$" not in val:
+
+        brackets = self.eager_brackets if eager else self.lazy_brackets
+        if brackets[0] not in val:
             return val
 
+        # disable force string conversion
         original_to_string = jinja2.runtime.to_string
         jinja2.runtime.to_string = lambda x: x
 
-        if eager:
-            template = self.eager_template
-        else:
-            template = self.lazy_template
-
-        t = template(val)
+        cache = self.cache_template[eager]
+        t = cache.get(val)
+        if t is None:
+            t = jinja2.Template(val, variable_start_string=brackets[0], variable_end_string=brackets[1])
+            cache[val] = t
         try:
-            # disable force string conversion
             r = list(t.root_render_func(t.new_context(data)))
             if len(r) == 1:
                 result = r[0]
