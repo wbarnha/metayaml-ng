@@ -2,3 +2,5 @@
 *.py[co]
 *.log
 *.egg-info/
+dist/*
+build/*
