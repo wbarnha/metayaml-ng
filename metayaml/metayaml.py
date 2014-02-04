@@ -29,7 +29,7 @@ class MetaYaml(object):
 
     def __init__(self, yaml_file, defaults=None, extend_key_word="extend"):
         self._extend_key_word = extend_key_word
-        self.data = defaults.copy() or {}
+        self.data = defaults.copy() if defaults or {}
         self.cache_template = defaultdict(lambda: {})
 
         if isinstance(yaml_file, basestring):
