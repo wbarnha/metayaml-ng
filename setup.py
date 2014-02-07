@@ -4,7 +4,7 @@ setup(
     name="metayaml",
     version="0.3",
     author="Anton Tagunov",
-    packages=["metayaml"],
+    packages=["metayaml", "PyYAML"],
     package_data={'': ['test_files/*.yaml']},
     url="https://bitbucket.org/atagunov/metayaml/",
     description="Enhancements of yaml format to support include and python expression",
