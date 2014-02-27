@@ -27,10 +27,11 @@ class MetaYaml(object):
     eager_brackets = "${", "}"
     lazy_brackets = "$(", ")"
 
-    def __init__(self, yaml_file, defaults=None, extend_key_word="extend"):
+    def __init__(self, yaml_file, defaults=None, extend_key_word="extend", extend_list=True):
         self._extend_key_word = extend_key_word
         self.data = defaults.copy() if defaults else {}
         self.cache_template = defaultdict(lambda: {})
+        self.extend_list = extend_list
 
         if isinstance(yaml_file, basestring):
             yaml_file = [yaml_file]
@@ -165,12 +166,15 @@ class MetaYaml(object):
             if isinstance(a_value, dict) and isinstance(b_value, dict):
                 self._merge(a[key], b_value, path + [str(key)])
             elif isinstance(a_value, list) and isinstance(b_value, list):
-                a_value.extend(b_value)
+                if self.extend_list:
+                    a_value.extend(b_value)
+                else:
+                    a[key] = b_value
             else:
                 a[key] = b[key]
         return a
 
 
-def read(yaml_file, defaults=None, extend_key_word="extend"):
-    m = MetaYaml(yaml_file, defaults, extend_key_word)
+def read(yaml_file, defaults=None, extend_key_word="extend", extend_list=True):
+    m = MetaYaml(yaml_file, defaults, extend_key_word, extend_list)
     return m.data

@@ -30,6 +30,14 @@ class TestMetaYaml(TestCase):
         self.assertEqual(d["test_math"], 1500)
         self.assertEqual(d["f3"], 33)
 
+    def test_list_extend(self):
+        files = [os.path.join("test_files", "list_extend.yaml")]
+        d = read(files)
+        self.assertEqual(d["test_list"], ["a", "b", "c", "d", "e"])
+
+        d = read(files, extend_list=False)
+        self.assertEqual(d["test_list"], ["d", "e"])
+
 
 if __name__ == '__main__':
     main()

@@ -1,0 +1,7 @@
+extend:
+  - test_list.yaml
+
+test_list:
+  - d
+  - e
+
