@@ -9,6 +9,13 @@ except ImportError:
     from yaml import Loader
 
 
+def omap_constructor(loader, node):
+    from collections import OrderedDict
+    return OrderedDict(loader.construct_pairs(node))
+
+yaml.add_constructor(u'!omap', omap_constructor)
+
+
 class MetaYamlException(Exception):
     pass
 
@@ -29,7 +36,7 @@ class MetaYaml(object):
 
     def __init__(self, yaml_file, defaults=None, extend_key_word="extend", extend_list=True):
         self._extend_key_word = extend_key_word
-        self.data = defaults.copy() if defaults else {}
+        self.data = defaults.copy() if defaults is not None else {}
         self.cache_template = defaultdict(lambda: {})
         self.extend_list = extend_list
 
@@ -134,7 +141,11 @@ class MetaYaml(object):
         cache = self.cache_template[eager]
         t = cache.get(val)
         if t is None:
-            t = jinja2.Template(val, variable_start_string=brackets[0], variable_end_string=brackets[1])
+            try:
+                t = jinja2.Template(val, variable_start_string=brackets[0], variable_end_string=brackets[1])
+            except Exception, e:
+                raise MetaYamlException("Template compiling error of key: %s, value: %s, error: %s" % (
+                    self._path_to_str(path), val, e))
             cache[val] = t
         try:
             r = list(t.root_render_func(t.new_context(data)))

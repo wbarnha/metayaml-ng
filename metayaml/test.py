@@ -3,6 +3,7 @@ import os
 from attrdict import AttrDict
 from unittest import main, TestCase
 from metayaml import read, MetaYamlException
+from collections import OrderedDict
 
 
 class TestMetaYaml(TestCase):
@@ -37,6 +38,13 @@ class TestMetaYaml(TestCase):
 
         d = read(files, extend_list=False)
         self.assertEqual(d["test_list"], ["d", "e"])
+
+    def test_order_map(self):
+        files = [os.path.join("test_files", "order.yaml")]
+
+        d = read(files, defaults=OrderedDict())
+        self.assertIsInstance(d, OrderedDict)
+        self.assertEqual(d.keys(), ["extend", "A", "B", "C", "Z", "AA"])
 
 
 if __name__ == '__main__':
