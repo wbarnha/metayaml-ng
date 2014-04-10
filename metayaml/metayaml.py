@@ -3,11 +3,6 @@ import jinja2
 import yaml
 from collections import Mapping, defaultdict
 
-try:
-    from yaml import CLoader as Loader
-except ImportError:
-    from yaml import Loader
-
 
 def omap_constructor(loader, node):
     from collections import OrderedDict
@@ -67,7 +62,7 @@ class MetaYaml(object):
         basename = [os.path.basename(path)]
 
         with open(path, "rb") as f:
-            file_data = yaml.load(f, Loader=Loader)
+            file_data = yaml.load(f)
 
         data[self._extend_key_word] = file_data.get(self._extend_key_word, [])
         self.substitute(data[self._extend_key_word], data, basename, eager=True)
