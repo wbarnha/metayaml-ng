@@ -29,11 +29,12 @@ class MetaYaml(object):
     eager_brackets = "${", "}"
     lazy_brackets = "$(", ")"
 
-    def __init__(self, yaml_file, defaults=None, extend_key_word="extend", extend_list=True):
+    def __init__(self, yaml_file, defaults=None, extend_key_word="extend", extend_list=True, ignore_errors=False):
         self._extend_key_word = extend_key_word
         self.data = defaults.copy() if defaults is not None else {}
         self.cache_template = defaultdict(lambda: {})
         self.extend_list = extend_list
+        self.ignore_errors = ignore_errors
 
         if isinstance(yaml_file, basestring):
             yaml_file = [yaml_file]
@@ -139,8 +140,9 @@ class MetaYaml(object):
             try:
                 t = jinja2.Template(val, variable_start_string=brackets[0], variable_end_string=brackets[1])
             except Exception, e:
-                raise MetaYamlException("Template compiling error of key: %s, value: %s, error: %s" % (
-                    self._path_to_str(path), val, e))
+                if not self.ignore_errors:
+                    raise MetaYamlException("Template compiling error of key: %s, value: %s, error: %s" % (
+                        self._path_to_str(path), val, e))
             cache[val] = t
         try:
             r = list(t.root_render_func(t.new_context(data)))
@@ -150,7 +152,9 @@ class MetaYaml(object):
                 r = [unicode(rr) for rr in r]
                 result = u"".join(r)
         except Exception as e:
-            raise MetaYamlException("Render template error of %s, %s: %s" % (self._path_to_str(path), val, e))
+            result = val
+            if not self.ignore_errors:
+                raise MetaYamlException("Render template error of %s, %s: %s" % (self._path_to_str(path), val, e))
         finally:
             jinja2.runtime.to_string = original_to_string
 
@@ -181,6 +185,6 @@ class MetaYaml(object):
         return a
 
 
-def read(yaml_file, defaults=None, extend_key_word="extend", extend_list=True):
-    m = MetaYaml(yaml_file, defaults, extend_key_word, extend_list)
+def read(yaml_file, defaults=None, extend_key_word="extend", extend_list=True, ignore_errors=False):
+    m = MetaYaml(yaml_file, defaults, extend_key_word, extend_list, ignore_errors)
     return m.data

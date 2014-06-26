@@ -46,6 +46,11 @@ class TestMetaYaml(TestCase):
         self.assertIsInstance(d, OrderedDict)
         self.assertEqual(d.keys(), ["extend", "A", "B", "C", "Z", "AA"])
 
+    def test_error(self):
+        # Render template error of test_lazy_template, $(f3*3): 'f3' is undefined
+        d = read(os.path.join("test_files", "f1.yaml"), {"join": os.path.join}, ignore_errors=True)
+        self.assertEqual(d["test_lazy_template"], "$(f3*3)")
+
 
 if __name__ == '__main__':
     main()
