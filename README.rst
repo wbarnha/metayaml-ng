@@ -2,6 +2,10 @@
 Meta Yaml
 =========
 
+.. image::
+  https://drone.io/bitbucket.org/atagunov/metayaml/status.png
+
+
 Mata Yaml is several enhancements for yaml format that allow the following:
 
 * include one yaml file from another
