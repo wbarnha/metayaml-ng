@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="metayaml",
-    version="0.8",
+    version="0.9",
     author="Anton Tagunov",
     packages=["metayaml"],
     package_data={'': ['test_files/*.yaml']},

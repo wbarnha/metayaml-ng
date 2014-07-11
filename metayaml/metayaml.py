@@ -43,24 +43,15 @@ class MetaYaml(object):
             assert all(isinstance(f, basestring) for f in yaml_file)
 
         for filename in yaml_file:
-            if os.path.abspath(filename):
-                self._current_dir = os.path.dirname(filename)
-                filename = os.path.basename(filename)
-            else:
-                self._current_dir = ""
+            if not os.path.isabs(filename):
+                filename = os.path.abspath(filename)
             self.load(filename, self.data)
 
         self.substitute(self.data, self.data, [os.path.basename(filename)], False)
 
-    def find_path(self, path):
-        if os.path.isabs(path):
-            return path
-
-        return os.path.join(self._current_dir, path)
-
     def load(self, path, data):
-        path = self.find_path(path)
         basename = [os.path.basename(path)]
+        file_dir = os.path.dirname(path)
 
         with open(path, "rb") as f:
             file_data = yaml.load(f)
@@ -82,6 +73,8 @@ class MetaYaml(object):
                     raise MetaYamlException("The value of %s should be list of string or string" %
                                             self._extend_key_word)
                 try:
+                    if not os.path.isabs(file_name):
+                        file_name = os.path.join(file_dir, file_name)
                     self.load(file_name, data)
                 except IOError as e:
                     raise FileNotFound("Open file %s error from %s: %s" % (file_name, path, e))
