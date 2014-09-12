@@ -139,7 +139,7 @@ Usage
 
  from metayaml import read
  read(["config.yaml",
-       "test.yaml",
+       "test.yaml"],
       {'join': os.path.join, # allows get right os specific path in yaml file
        'env': os.environ}  # allows use system environments from yaml file
      )
@@ -158,6 +158,42 @@ Usage
  debug: true
 
 
+Order of substitution
+=====================
+
+By default the order of mapping collection (dictionary) is not defined, therefore the result of processing
+of the following file is not as expected::
+
+  A: 1
+  B: ${A+1}
+  AA: ${B}
+
+The result is::
+
+  {'A': 1, 'AA': '${A+1}', 'B': 2}
+
+
+because 'AA' is substituded before 'B'.
+
+To prevent indeterminacy the omap tag (http://yaml.org/type/omap.html) can be used::
+
+  !omap
+  A: 1
+  B: ${A+1}
+  AA: ${B}
+
+
+Also the 'defaults' parameter **must be** OrderedDict::
+
+  from metayaml import read
+  from collections import OrderedDict
+
+  q = read(["order.yaml"], defaults=OrderedDict())
+
+
+In this case  items are processed in the definition order and the result is::
+
+  OrderedDict([('A', 1), ('B', 2), ('AA', 2)])
 
 
 License
