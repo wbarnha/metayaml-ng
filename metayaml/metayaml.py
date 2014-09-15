@@ -54,7 +54,7 @@ class MetaYaml(object):
         file_dir = os.path.dirname(path)
 
         with open(path, "rb") as f:
-            file_data = yaml.load(f)
+            file_data = yaml.load(f) or {}
 
         data[self._extend_key_word] = file_data.get(self._extend_key_word, [])
         self.substitute(data[self._extend_key_word], data, basename, eager=True)
