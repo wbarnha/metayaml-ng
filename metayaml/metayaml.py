@@ -1,7 +1,7 @@
 import os
 import jinja2
 import yaml
-from collections import Mapping, defaultdict, Iterable
+from collections import MutableMapping, defaultdict, Iterable
 from glob import glob
 
 
@@ -36,9 +36,13 @@ class MetaYaml(object):
           Reads and process yaml config files
 
           :param yaml_file
-          :type  yaml_file   str or list[str]
-          :param defaults    Dictionary with default values which can be use during parsing yaml files
+          :type  yaml_file      str or list[str]
+          :param defaults       Dictionary with default values which can be use during parsing yaml files
           :param extend_key_word  The name of section with list of included files
+          :param extend_list    List will be extended during merge process if it is true.
+                                Otherwise new values will be replaced
+          :param ignore_errors  Do not rise exception when value can't be rendered
+          :param ignore_not_existed_files Do not rise exception if the file not found
         """
 
         self._extend_key_word = extend_key_word
@@ -52,7 +56,7 @@ class MetaYaml(object):
         if isinstance(yaml_file, basestring):
             yaml_file = [yaml_file]
         else:
-            assert isinstance(yaml_file, Iterable)
+            assert isinstance(yaml_file, Iterable), "yaml_file should be string or list of strings"
 
         files = self.extend_filename(yaml_file)
         for filename in files:
@@ -120,7 +124,7 @@ class MetaYaml(object):
 
     def substitute(self, value, data, path, eager):
         path = path or []
-        if isinstance(value, Mapping):
+        if isinstance(value, MutableMapping):
             for key, val in value.iteritems():
                 new_path = path + [_to_str(key)]
                 new_key = self.eval_value(key, new_path, data, eager)
@@ -137,18 +141,20 @@ class MetaYaml(object):
 
     @staticmethod
     def _path_to_str(path):
-        def tostr(p):
+        def to_str(p):
             if isinstance(p, basestring):
+                # noinspection PyTypeChecker
                 return "." + p
             else:
                 return "[%s]" % (p,)
 
-        l = (tostr(p) for p in path)
+        l = (to_str(p) for p in path)
         s = "".join(l)
         if s.startswith("."):
             s = s[1:]
         return s
 
+    # noinspection PyUnresolvedReferences
     def eval_value(self, val, path, data, eager):
         if not isinstance(val, basestring):
             return val
@@ -212,6 +218,19 @@ class MetaYaml(object):
         return a
 
 
-def read(yaml_file, defaults=None, extend_key_word="extend", extend_list=True, ignore_errors=False):
-    m = MetaYaml(yaml_file, defaults, extend_key_word, extend_list, ignore_errors)
+def read(yaml_file, defaults=None, extend_key_word="extend", extend_list=True, ignore_errors=False,
+         ignore_not_existed_files=False):
+    """
+      Reads and process yaml config files
+
+      :param yaml_file
+      :type  yaml_file      str or list[str]
+      :param defaults       Dictionary with default values which can be use during parsing yaml files
+      :param extend_key_word  The name of section with list of included files
+      :param extend_list    List will be extended during merge process if it is true.
+                            Otherwise new values will be replaced
+      :param ignore_errors  Do not rise exception when value can't be rendered
+      :param ignore_not_existed_files Do not rise exception if the file not found
+    """
+    m = MetaYaml(yaml_file, defaults, extend_key_word, extend_list, ignore_errors, ignore_not_existed_files)
     return m.data
