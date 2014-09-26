@@ -31,6 +31,12 @@ class TestMetaYaml(TestCase):
         self.assertEqual(d["test_math"], 1500)
         self.assertEqual(d["f3"], 33)
 
+    def test_multi_file_reading_match(self):
+        files = [os.path.join("test_files", "test.yaml"), os.path.join("test_files", "test_m*.yaml")]
+        d = read(files, {"join": os.path.join})
+        self.assertEqual(d["test_math"], 1500)
+        self.assertEqual(d["f3"], 33)
+
     def test_list_extend(self):
         files = [os.path.join("test_files", "list_extend.yaml")]
         d = read(files)

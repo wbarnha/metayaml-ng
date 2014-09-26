@@ -1,7 +1,8 @@
 import os
 import jinja2
 import yaml
-from collections import Mapping, defaultdict
+from collections import Mapping, defaultdict, Iterable
+from glob import glob
 
 
 def omap_constructor(loader, node):
@@ -29,27 +30,58 @@ class MetaYaml(object):
     eager_brackets = "${", "}"
     lazy_brackets = "$(", ")"
 
-    def __init__(self, yaml_file, defaults=None, extend_key_word="extend", extend_list=True, ignore_errors=False):
+    def __init__(self, yaml_file, defaults=None, extend_key_word="extend",
+                 extend_list=True, ignore_errors=False, ignore_not_existed_files=False):
+        """
+          Reads and process yaml config files
+
+          :param yaml_file
+          :type  yaml_file   str or list[str]
+          :param defaults    Dictionary with default values which can be use during parsing yaml files
+          :param extend_key_word  The name of section with list of included files
+        """
+
         self._extend_key_word = extend_key_word
         self.data = defaults.copy() if defaults is not None else {}
         self.cache_template = defaultdict(lambda: {})
         self.extend_list = extend_list
         self.ignore_errors = ignore_errors
+        self.ignore_not_existed_files = ignore_not_existed_files
+        self.processed_files = set()
 
         if isinstance(yaml_file, basestring):
             yaml_file = [yaml_file]
         else:
-            assert isinstance(yaml_file, list)
-            assert all(isinstance(f, basestring) for f in yaml_file)
+            assert isinstance(yaml_file, Iterable)
 
-        for filename in yaml_file:
-            if not os.path.isabs(filename):
-                filename = os.path.abspath(filename)
+        files = self.extend_filename(yaml_file)
+        for filename in files:
             self.load(filename, self.data)
 
-        self.substitute(self.data, self.data, [os.path.basename(filename)], False)
+        self.substitute(self.data, self.data, [os.path.basename(files[0])], False)
+
+    def extend_filename(self, file_list, path=None):
+        files = []
+        for filename in file_list:
+            if not os.path.isabs(filename):
+                if not path:
+                    path = os.getcwdu() if isinstance(filename, unicode) else os.getcwd()
+
+                filename = os.path.join(path, filename)
+
+            found_files = glob(filename)
+            if not self.ignore_not_existed_files and not found_files:
+                raise FileNotFound("File %s not found" % filename)
+            found_files.sort()
+            files.extend(found_files)
+
+        return files
 
     def load(self, path, data):
+        if path in self.processed_files:
+            return data  # file was already processed
+
+        self.processed_files.add(path)
         basename = [os.path.basename(path)]
         file_dir = os.path.dirname(path)
 
@@ -65,16 +97,18 @@ class MetaYaml(object):
             self.substitute(data, data, basename, eager=True)
             if isinstance(extends, basestring):
                 extends = [extends]
-            if not isinstance(extends, list):
-                raise MetaYamlException("The value of %s should be list of string or string" % self._extend_key_word)
+
+            if not isinstance(extends, Iterable):
+                raise MetaYamlException("The value of %s should be list of string or string" %
+                                        self._path_to_str([basename, self._extend_key_word]))
 
             for file_name in extends:
                 if not isinstance(file_name, basestring):
                     raise MetaYamlException("The value of %s should be list of string or string" %
-                                            self._extend_key_word)
+                                            self._path_to_str([basename, self._extend_key_word]))
+
+            for file_name in self.extend_filename(extends, file_dir):
                 try:
-                    if not os.path.isabs(file_name):
-                        file_name = os.path.join(file_dir, file_name)
                     self.load(file_name, data)
                 except IOError as e:
                     raise FileNotFound("Open file %s error from %s: %s" % (file_name, path, e))
