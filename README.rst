@@ -83,7 +83,9 @@ The order and sequence of file processing is shown in the following table:
 Expression syntax
 -----------------
 
-Metayaml support any python valid expression. For this expression should be enclosed in brackets ${} or $(). The first brackets is used for eager substitute and $() for laze. I.e. expressions in $() are applied after full read file and its include files but ${} during file read.
+Metayaml support any python valid expression. For this expression should be enclosed in brackets ${} or $().
+The first brackets is used for eager substitute and $() for laze. I.e. expressions in $() are applied after
+full read file and its include files but ${} during file read.
 
 The access to other values from expression can be done by using dictionary syntax or 'dash dictionary syntax'.
 
@@ -161,39 +163,84 @@ Usage
 Order of substitution
 =====================
 
-By default the order of mapping collection (dictionary) is not defined, therefore the result of processing
-of the following file is not as expected::
+The substitutions are done in order of the values in the file. I.e. the following example will be failed::
+
+  B: ${A+1}     <--- A is not defined here
+  AA: ${B}
+  A: 1
+
+But the following The result is ok::
 
   A: 1
   B: ${A+1}
   AA: ${B}
 
-The result is::
 
-  {'A': 1, 'AA': '${A+1}', 'B': 2}
+Change merge behavior
+=====================
+
+By default it is possible to add new keys in the dict and replace the list. In some cases it is necessary to remove
+keys from base file or add some values to list. For example
+
+**base.yaml**::
+
+  main:
+      iso_3166:
+        China: CN
+        Honduras: HN
+        Madagascar: MG
+
+      country_codes:
+        - CN
+        - HN
+        - MG
+
+      country_codes_3:
+        - CHN
+        - HND
+        - MDG
+
+**last.yaml**::
+
+    extend:
+      - base.yaml
+    main:
+      iso_3166:
+         ${__del__}: China  #  key 'China' will be removed from the result
+         Liberia: LR  # add new key
+
+      country_codes:
+         - LR         # after merge country_codes contains only one element.
 
 
-because 'AA' is substituded before 'B'.
-
-To prevent indeterminacy the omap tag (http://yaml.org/type/omap.html) can be used::
-
-  !omap
-  A: 1
-  B: ${A+1}
-  AA: ${B}
+      country_codes_3:
+        ${__extend__}:
+          - LBR       # the result list is ["CHN", "HND", "MDG", "LBR"]
 
 
-Also the 'defaults' parameter **must be** OrderedDict::
+The result of the code::
 
-  from metayaml import read
-  from collections import OrderedDict
+    d = read("last.yaml")
+    print d
 
-  q = read(["order.yaml"], defaults=OrderedDict())
-
-
-In this case  items are processed in the definition order and the result is::
-
-  OrderedDict([('A', 1), ('B', 2), ('AA', 2)])
+    {
+        "main": {
+            "iso_3166": {
+                "Honduras": "HN",
+                "Madagascar": "MG",
+                "Liberia": "LR"
+            },
+            "country_codes": [
+                "LR"
+            ],
+            "country_codes_3": [
+                "CHN",
+                "HND",
+                "MDG",
+                "LBR"
+            ]
+        }
+    }
 
 
 License

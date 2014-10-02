@@ -1,15 +1,47 @@
 import os
 import jinja2
 import yaml
-from collections import MutableMapping, defaultdict, Iterable
+from collections import MutableMapping, defaultdict, Iterable, OrderedDict
 from glob import glob
+import yaml.constructor
 
 
-def omap_constructor(loader, node):
-    from collections import OrderedDict
-    return OrderedDict(loader.construct_pairs(node))
+class OrderedDictYAMLLoader(yaml.Loader):
+    """
+    A YAML loader that loads mappings into ordered dictionaries.
+    """
 
-yaml.add_constructor(u'!omap', omap_constructor)
+    def __init__(self, *args, **kwargs):
+        yaml.Loader.__init__(self, *args, **kwargs)
+
+        self.add_constructor(u'tag:yaml.org,2002:map', type(self).construct_yaml_map)
+        self.add_constructor(u'tag:yaml.org,2002:omap', type(self).construct_yaml_map)
+
+    def construct_yaml_map(self, node):
+        data = OrderedDict()
+        yield data
+        value = self.construct_mapping(node)
+        data.update(value)
+
+    def construct_mapping(self, node, deep=False):
+        if isinstance(node, yaml.MappingNode):
+            self.flatten_mapping(node)
+        else:
+            raise yaml.constructor.ConstructorError(None, None,
+                                                    'expected a mapping node, but found %s' % node.id, node.start_mark)
+
+        mapping = OrderedDict()
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            try:
+                hash(key)
+            except TypeError, exc:
+                raise yaml.constructor.ConstructorError('while constructing a mapping',
+                                                        node.start_mark,
+                                                        'found unacceptable key (%s)' % exc, key_node.start_mark)
+            value = self.construct_object(value_node, deep=deep)
+            mapping[key] = value
+        return mapping
 
 
 class MetaYamlException(Exception):
@@ -30,8 +62,12 @@ class MetaYaml(object):
     eager_brackets = "${", "}"
     lazy_brackets = "$(", ")"
 
+    DEL_MARKER = "${__del__}"
+    DEL_ALL_MARKER = "${__del_all__}"
+    EXTEND_MARKER = "${__extend__}"
+
     def __init__(self, yaml_file, defaults=None, extend_key_word="extend",
-                 extend_list=True, ignore_errors=False, ignore_not_existed_files=False):
+                 ignore_errors=False, ignore_not_existed_files=False):
         """
           Reads and process yaml config files
 
@@ -39,16 +75,13 @@ class MetaYaml(object):
           :type  yaml_file      str or list[str]
           :param defaults       Dictionary with default values which can be use during parsing yaml files
           :param extend_key_word  The name of section with list of included files
-          :param extend_list    List will be extended during merge process if it is true.
-                                Otherwise new values will be replaced
           :param ignore_errors  Do not rise exception when value can't be rendered
           :param ignore_not_existed_files Do not rise exception if the file not found
         """
 
         self._extend_key_word = extend_key_word
-        self.data = defaults.copy() if defaults is not None else {}
+        self.data = OrderedDict(defaults) if defaults else {}
         self.cache_template = defaultdict(lambda: {})
-        self.extend_list = extend_list
         self.ignore_errors = ignore_errors
         self.ignore_not_existed_files = ignore_not_existed_files
         self.processed_files = set()
@@ -63,6 +96,7 @@ class MetaYaml(object):
             self.load(filename, self.data)
 
         self.substitute(self.data, self.data, [os.path.basename(files[0])], False)
+        self.data.pop(self._extend_key_word, None)
 
     def extend_filename(self, file_list, path=None):
         files = []
@@ -90,7 +124,7 @@ class MetaYaml(object):
         file_dir = os.path.dirname(path)
 
         with open(path, "rb") as f:
-            file_data = yaml.load(f) or {}
+            file_data = yaml.load(f, OrderedDictYAMLLoader) or {}
 
         data[self._extend_key_word] = file_data.get(self._extend_key_word, [])
         self.substitute(data[self._extend_key_word], data, basename, eager=True)
@@ -117,7 +151,7 @@ class MetaYaml(object):
                 except IOError as e:
                     raise FileNotFound("Open file %s error from %s: %s" % (file_name, path, e))
 
-        self._merge(data, file_data)
+        self._merge(data, file_data, data)
         self.substitute(data, data, basename, eager=True)
 
         return data
@@ -125,12 +159,16 @@ class MetaYaml(object):
     def substitute(self, value, data, path, eager):
         path = path or []
         if isinstance(value, MutableMapping):
+            to_remove = []
             for key, val in value.iteritems():
                 new_path = path + [_to_str(key)]
                 new_key = self.eval_value(key, new_path, data, eager)
                 if new_key != key:
-                    del value[key]
+                    to_remove.append(key)
                 value[new_key] = self.substitute(val, data, new_path, eager)
+
+            for k in to_remove:
+                del value[k]
         elif isinstance(value, list):
             for key in xrange(len(value)):
                 value[key] = self.substitute(value[key], data, path + [_to_str(key)], eager)
@@ -201,25 +239,40 @@ class MetaYaml(object):
 
         return result
 
-    def _merge(self, a, b, path=None):
+    def _merge(self, a, b, data, path=None):
         if path is None:
             path = []
         for key, b_value in b.iteritems():
-            a_value = a.get(key)
-            if isinstance(a_value, dict) and isinstance(b_value, dict):
-                self._merge(a[key], b_value, path + [str(key)])
-            elif isinstance(a_value, list) and isinstance(b_value, list):
-                if self.extend_list:
-                    a_value.extend(b_value)
+            if key == self.DEL_MARKER:
+                new_value = self.substitute(b_value, data, path + [str(key)], True)
+                if isinstance(new_value, Iterable) and not isinstance(new_value, basestring):
+                    for v in new_value:
+                        a.pop(v, None)
                 else:
-                    a[key] = b_value
+                    a.pop(new_value, None)
+            elif key == self.DEL_ALL_MARKER:
+                a.clear()
+
+        for key, b_value in b.iteritems():
+            if key in (self.DEL_MARKER, self.DEL_ALL_MARKER):
+                continue
+            a_value = a.get(key)
+            if isinstance(a_value, MutableMapping) and isinstance(b_value, MutableMapping):
+                self._merge(a[key], b_value, path + [str(key)])
+            elif (isinstance(a_value, list) and isinstance(b_value, MutableMapping) and
+                  len(b_value) == 1 and self.EXTEND_MARKER in b_value):
+                extend = b_value[self.EXTEND_MARKER]
+                if not isinstance(extend, list):
+                    raise MetaYamlException("The value of %s.%s must be list" %
+                                            (self._path_to_str(path), self.EXTEND_MARKER))
+
+                a[key].extend(extend)
             else:
-                a[key] = b[key]
+                a[key] = b_value
         return a
 
 
-def read(yaml_file, defaults=None, extend_key_word="extend", extend_list=True, ignore_errors=False,
-         ignore_not_existed_files=False):
+def read(yaml_file, defaults=None, extend_key_word="extend", ignore_errors=False, ignore_not_existed_files=False):
     """
       Reads and process yaml config files
 
@@ -227,10 +280,8 @@ def read(yaml_file, defaults=None, extend_key_word="extend", extend_list=True, i
       :type  yaml_file      str or list[str]
       :param defaults       Dictionary with default values which can be use during parsing yaml files
       :param extend_key_word  The name of section with list of included files
-      :param extend_list    List will be extended during merge process if it is true.
-                            Otherwise new values will be replaced
       :param ignore_errors  Do not rise exception when value can't be rendered
       :param ignore_not_existed_files Do not rise exception if the file not found
     """
-    m = MetaYaml(yaml_file, defaults, extend_key_word, extend_list, ignore_errors, ignore_not_existed_files)
+    m = MetaYaml(yaml_file, defaults, extend_key_word, ignore_errors, ignore_not_existed_files)
     return m.data

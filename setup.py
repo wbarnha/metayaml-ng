@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="metayaml",
-    version="0.11",
+    version="0.12",
     author="Anton Tagunov",
     packages=["metayaml"],
     package_data={'': ['test_files/*.yaml']},
@@ -10,8 +10,5 @@ setup(
     description="Enhancements of yaml format to support include and python expression",
     long_description=open('README.rst').read(),
     install_requires=['jinja2', 'PyYAML'],
-    extras_require={
-        'test': ['attrdict'],
-    },
     include_package_data=True,
 )
