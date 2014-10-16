@@ -1,47 +1,52 @@
 import os
 import jinja2
 import yaml
-from collections import MutableMapping, defaultdict, Iterable, OrderedDict
+from collections import MutableMapping, defaultdict, Iterable
 from glob import glob
 import yaml.constructor
+try:
+    from collections import OrderedDict
+except ImportError:
+    OrderedDict = None
 
 
-class OrderedDictYAMLLoader(yaml.Loader):
-    """
-    A YAML loader that loads mappings into ordered dictionaries.
-    """
+if OrderedDict:
+    class OrderedDictYAMLLoader(yaml.Loader):
+        """
+        A YAML loader that loads mappings into ordered dictionaries.
+        """
 
-    def __init__(self, *args, **kwargs):
-        yaml.Loader.__init__(self, *args, **kwargs)
+        def __init__(self, *args, **kwargs):
+            yaml.Loader.__init__(self, *args, **kwargs)
 
-        self.add_constructor(u'tag:yaml.org,2002:map', type(self).construct_yaml_map)
-        self.add_constructor(u'tag:yaml.org,2002:omap', type(self).construct_yaml_map)
+            self.add_constructor(u'tag:yaml.org,2002:map', type(self).construct_yaml_map)
+            self.add_constructor(u'tag:yaml.org,2002:omap', type(self).construct_yaml_map)
 
-    def construct_yaml_map(self, node):
-        data = OrderedDict()
-        yield data
-        value = self.construct_mapping(node)
-        data.update(value)
+        def construct_yaml_map(self, node):
+            data = OrderedDict()
+            yield data
+            value = self.construct_mapping(node)
+            data.update(value)
 
-    def construct_mapping(self, node, deep=False):
-        if isinstance(node, yaml.MappingNode):
-            self.flatten_mapping(node)
-        else:
-            raise yaml.constructor.ConstructorError(None, None,
-                                                    'expected a mapping node, but found %s' % node.id, node.start_mark)
+        def construct_mapping(self, node, deep=False):
+            if isinstance(node, yaml.MappingNode):
+                self.flatten_mapping(node)
+            else:
+                raise yaml.constructor.ConstructorError(None, None,
+                                                        'expected a mapping node, but found %s' % node.id, node.start_mark)
 
-        mapping = OrderedDict()
-        for key_node, value_node in node.value:
-            key = self.construct_object(key_node, deep=deep)
-            try:
-                hash(key)
-            except TypeError, exc:
-                raise yaml.constructor.ConstructorError('while constructing a mapping',
-                                                        node.start_mark,
-                                                        'found unacceptable key (%s)' % exc, key_node.start_mark)
-            value = self.construct_object(value_node, deep=deep)
-            mapping[key] = value
-        return mapping
+            mapping = OrderedDict()
+            for key_node, value_node in node.value:
+                key = self.construct_object(key_node, deep=deep)
+                try:
+                    hash(key)
+                except TypeError, exc:
+                    raise yaml.constructor.ConstructorError('while constructing a mapping',
+                                                            node.start_mark,
+                                                            'found unacceptable key (%s)' % exc, key_node.start_mark)
+                value = self.construct_object(value_node, deep=deep)
+                mapping[key] = value
+            return mapping
 
 
 class MetaYamlException(Exception):
@@ -67,7 +72,8 @@ class MetaYaml(object):
     EXTEND_MARKER = "${__extend__}"
 
     def __init__(self, yaml_file, defaults=None, extend_key_word="extend",
-                 ignore_errors=False, ignore_not_existed_files=False):
+                 ignore_errors=False, ignore_not_existed_files=False,
+                 disable_order_dict=False):
         """
           Reads and process yaml config files
 
@@ -77,10 +83,16 @@ class MetaYaml(object):
           :param extend_key_word  The name of section with list of included files
           :param ignore_errors  Do not rise exception when value can't be rendered
           :param ignore_not_existed_files Do not rise exception if the file not found
+          :param disable_order_dict  The dict type is used if it is true and OrderedDict otherwise
         """
 
         self._extend_key_word = extend_key_word
-        self.data = OrderedDict(defaults) if defaults else {}
+        self.disable_order_dict = disable_order_dict or (not OrderedDict)
+        if disable_order_dict:
+            self.data = defaults or {}
+        else:
+            self.data = OrderedDict(defaults) if defaults else {}
+
         self.cache_template = defaultdict(lambda: {})
         self.ignore_errors = ignore_errors
         self.ignore_not_existed_files = ignore_not_existed_files
@@ -124,7 +136,8 @@ class MetaYaml(object):
         file_dir = os.path.dirname(path)
 
         with open(path, "rb") as f:
-            file_data = yaml.load(f, OrderedDictYAMLLoader) or {}
+            loader = yaml.Loader if self.disable_order_dict else OrderedDictYAMLLoader
+            file_data = yaml.load(f, loader) or {}
 
         data[self._extend_key_word] = file_data.get(self._extend_key_word, [])
         self.substitute(data[self._extend_key_word], data, basename, eager=True)
@@ -272,7 +285,8 @@ class MetaYaml(object):
         return a
 
 
-def read(yaml_file, defaults=None, extend_key_word="extend", ignore_errors=False, ignore_not_existed_files=False):
+def read(yaml_file, defaults=None, extend_key_word="extend", ignore_errors=False,
+         ignore_not_existed_files=False, disable_order_dict=False):
     """
       Reads and process yaml config files
 
@@ -282,6 +296,7 @@ def read(yaml_file, defaults=None, extend_key_word="extend", ignore_errors=False
       :param extend_key_word  The name of section with list of included files
       :param ignore_errors  Do not rise exception when value can't be rendered
       :param ignore_not_existed_files Do not rise exception if the file not found
+      :param disable_order_dict  The dict type is used if it is true and OrderDict otherwise
     """
-    m = MetaYaml(yaml_file, defaults, extend_key_word, ignore_errors, ignore_not_existed_files)
+    m = MetaYaml(yaml_file, defaults, extend_key_word, ignore_errors, ignore_not_existed_files, disable_order_dict)
     return m.data

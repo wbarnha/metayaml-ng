@@ -53,6 +53,10 @@ class TestMetaYaml(TestCase):
         self.assertEqual(d["main"]["remove_all_from_here"], {8: 8})
         self.assertEqual(d["main"]["test1"], ["v3", "v4", "v5"])
 
+    def test_disable_order_dict(self):
+        d = read(self._file_name("test.yaml"), {"CWD": os.getcwd(), "join": os.path.join},
+                 disable_order_dict=True)
+        self.assertEqual(type(d), dict)
 
 if __name__ == '__main__':
     main()
