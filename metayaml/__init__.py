@@ -1,1 +1,1 @@
-from metayaml import MetaYaml, read, MetaYamlException, FileNotFound
+from . metayaml import MetaYaml, read, MetaYamlException, FileNotFound
