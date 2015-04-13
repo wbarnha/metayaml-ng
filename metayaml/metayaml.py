@@ -1,6 +1,7 @@
 import os
 import jinja2
 import yaml
+import six
 from collections import MutableMapping, defaultdict, Iterable
 from glob import glob
 import yaml.constructor
@@ -9,6 +10,10 @@ try:
 except ImportError:
     OrderedDict = None
 
+if six.PY2:
+    getcwd = lambda filename: os.getcwdu() if isinstance(filename, unicode) else os.getcwd()
+else:
+    getcwd = os.getcwd
 
 if OrderedDict:
     class OrderedDictYAMLLoader(yaml.Loader):
@@ -33,14 +38,15 @@ if OrderedDict:
                 self.flatten_mapping(node)
             else:
                 raise yaml.constructor.ConstructorError(None, None,
-                                                        'expected a mapping node, but found %s' % node.id, node.start_mark)
+                                                        'expected a mapping node, but found %s' % node.id,
+                                                        node.start_mark)
 
             mapping = OrderedDict()
             for key_node, value_node in node.value:
                 key = self.construct_object(key_node, deep=deep)
                 try:
                     hash(key)
-                except TypeError, exc:
+                except TypeError as exc:
                     raise yaml.constructor.ConstructorError('while constructing a mapping',
                                                             node.start_mark,
                                                             'found unacceptable key (%s)' % exc, key_node.start_mark)
@@ -58,8 +64,9 @@ class FileNotFound(MetaYamlException):
 
 
 def _to_str(value):
-    if isinstance(value, unicode):
-        return value
+    if six.PY2:
+        if isinstance(value, unicode):
+            return value
     return str(value)
 
 
@@ -98,7 +105,7 @@ class MetaYaml(object):
         self.ignore_not_existed_files = ignore_not_existed_files
         self.processed_files = set()
 
-        if isinstance(yaml_file, basestring):
+        if isinstance(yaml_file, six.string_types):
             yaml_file = [yaml_file]
         else:
             assert isinstance(yaml_file, Iterable), "yaml_file should be string or list of strings"
@@ -115,7 +122,7 @@ class MetaYaml(object):
         for filename in file_list:
             if not os.path.isabs(filename):
                 if not path:
-                    path = os.getcwdu() if isinstance(filename, unicode) else os.getcwd()
+                    path = getcwd()
 
                 filename = os.path.join(path, filename)
 
@@ -146,7 +153,7 @@ class MetaYaml(object):
 
         if extends:
             self.substitute(data, data, basename, eager=True)
-            if isinstance(extends, basestring):
+            if isinstance(extends, six.string_types):
                 extends = [extends]
 
             if not isinstance(extends, Iterable):
@@ -154,7 +161,7 @@ class MetaYaml(object):
                                         self._path_to_str([basename, self._extend_key_word]))
 
             for file_name in extends:
-                if not isinstance(file_name, basestring):
+                if not isinstance(file_name, six.string_types):
                     raise MetaYamlException("The value of %s should be list of string or string" %
                                             self._path_to_str([basename, self._extend_key_word]))
 
@@ -173,7 +180,7 @@ class MetaYaml(object):
         path = path or []
         if isinstance(value, MutableMapping):
             to_remove = []
-            for key, val in value.iteritems():
+            for key, val in six.iteritems(value):
                 new_path = path + [_to_str(key)]
                 new_key = self.eval_value(key, new_path, data, eager)
                 if new_key != key:
@@ -183,9 +190,9 @@ class MetaYaml(object):
             for k in to_remove:
                 del value[k]
         elif isinstance(value, list):
-            for key in xrange(len(value)):
+            for key in range(len(value)):
                 value[key] = self.substitute(value[key], data, path + [_to_str(key)], eager)
-        elif isinstance(value, basestring):
+        elif isinstance(value, six.string_types):
             value = self.eval_value(value, path, data, eager)
 
         return value
@@ -193,7 +200,7 @@ class MetaYaml(object):
     @staticmethod
     def _path_to_str(path):
         def to_str(p):
-            if isinstance(p, basestring):
+            if isinstance(p, six.string_types):
                 # noinspection PyTypeChecker
                 return "." + p
             else:
@@ -207,7 +214,7 @@ class MetaYaml(object):
 
     # noinspection PyUnresolvedReferences
     def eval_value(self, val, path, data, eager):
-        if not isinstance(val, basestring):
+        if not isinstance(val, six.string_types):
             return val
 
         brackets = self.eager_brackets if eager else self.lazy_brackets
@@ -223,17 +230,18 @@ class MetaYaml(object):
         if t is None:
             try:
                 t = jinja2.Template(val, variable_start_string=brackets[0], variable_end_string=brackets[1])
-            except Exception, e:
+            except Exception as e:
                 if not self.ignore_errors:
                     raise MetaYamlException("Template compiling error of key: %s, value: %s, error: %s" % (
                         self._path_to_str(path), val, e))
             cache[val] = t
         try:
-            r = list(t.root_render_func(t.new_context(data)))
+            data_str_key = {_to_str(k): v for k, v in six.iteritems(data)}
+            r = list(t.root_render_func(t.new_context(data_str_key)))
             if len(r) == 1:
                 result = r[0]
             else:
-                r = [unicode(rr) for rr in r]
+                r = [_to_str(rr) for rr in r]
                 result = u"".join(r)
         except Exception as e:
             result = val
@@ -242,7 +250,7 @@ class MetaYaml(object):
         finally:
             jinja2.runtime.to_string = original_to_string
 
-        if isinstance(result, basestring):
+        if isinstance(result, six.string_types):
             for t in [int, float]:
                 try:
                     result = t(result)
@@ -255,10 +263,10 @@ class MetaYaml(object):
     def _merge(self, a, b, data, path=None):
         if path is None:
             path = []
-        for key, b_value in b.iteritems():
+        for key, b_value in six.iteritems(b):
             if key == self.DEL_MARKER:
                 new_value = self.substitute(b_value, data, path + [str(key)], True)
-                if isinstance(new_value, Iterable) and not isinstance(new_value, basestring):
+                if isinstance(new_value, Iterable) and not isinstance(new_value, six.string_types):
                     for v in new_value:
                         a.pop(v, None)
                 else:
@@ -266,7 +274,7 @@ class MetaYaml(object):
             elif key == self.DEL_ALL_MARKER:
                 a.clear()
 
-        for key, b_value in b.iteritems():
+        for key, b_value in six.iteritems(b):
             if key in (self.DEL_MARKER, self.DEL_ALL_MARKER):
                 continue
             a_value = a.get(key)

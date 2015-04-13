@@ -2,14 +2,24 @@ from setuptools import setup
 
 setup(
     name="metayaml",
-    version="0.13",
+    version="0.14",
     author="Anton Tagunov",
     packages=["metayaml"],
     package_data={'': ['test_files/*.yaml']},
     url="https://bitbucket.org/atagunov/metayaml/",
     description="Enhancements of yaml format to support include and python expression",
     long_description=open('README.rst').read(),
-    install_requires=['jinja2', 'PyYAML'],
+    install_requires=['jinja2', 'PyYAML', 'six'],
     include_package_data=True,
-    test_suite="metayaml.test"
+    test_suite="metayaml.test",
+    classifiers=[
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "Natural Language :: English",
+        "License :: OSI Approved :: Apache Software License",
+        "Environment :: Other Environment",
+        "Operating System :: OS Independent",
+        "Topic :: Software Development :: Libraries :: Python Modules"]
 )
