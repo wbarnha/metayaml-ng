@@ -242,7 +242,7 @@ class MetaYaml(object):
                 result = r[0]
             else:
                 r = [_to_str(rr) for rr in r]
-                result = u"".join(r)
+                result = six.u("").join(r)
         except Exception as e:
             result = val
             if not self.ignore_errors:
