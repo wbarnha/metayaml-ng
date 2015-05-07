@@ -13,7 +13,7 @@ except ImportError:
 if six.PY2:
     getcwd = lambda filename: os.getcwdu() if isinstance(filename, unicode) else os.getcwd()
 else:
-    getcwd = os.getcwd
+    getcwd = lambda filename: os.getcwd
 
 if OrderedDict:
     class OrderedDictYAMLLoader(yaml.Loader):
@@ -122,7 +122,7 @@ class MetaYaml(object):
         for filename in file_list:
             if not os.path.isabs(filename):
                 if not path:
-                    path = getcwd()
+                    path = getcwd(filename)
 
                 filename = os.path.join(path, filename)
 
