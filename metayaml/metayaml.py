@@ -13,7 +13,7 @@ except ImportError:
 if six.PY2:
     getcwd = lambda filename: os.getcwdu() if isinstance(filename, unicode) else os.getcwd()
 else:
-    getcwd = lambda filename: os.getcwd
+    getcwd = lambda filename: os.getcwd()
 
 if OrderedDict:
     class OrderedDictYAMLLoader(yaml.Loader):
