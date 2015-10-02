@@ -2,7 +2,7 @@ import os
 import jinja2
 import yaml
 import six
-from collections import MutableMapping, defaultdict, Iterable
+from collections import MutableMapping, defaultdict, Iterable, Mapping
 from glob import glob
 import yaml.constructor
 try:
@@ -78,6 +78,19 @@ class MetaYaml(object):
     DEL_ALL_MARKER = "${__del_all__}"
     EXTEND_MARKER = "${__extend__}"
 
+    def cp(self, source, *args, **kwargs):
+        if isinstance(source, Mapping):
+            result = source.copy()
+            for arg in args:
+                source.update(arg)
+            result.update(kwargs)
+            return result
+        elif isinstance(source, (list, tuple)):
+            result = list(source)
+            result.extend(args)
+            return result
+        raise MetaYamlException("cp method support only dict and list as source")
+
     def __init__(self, yaml_file, defaults=None, extend_key_word="extend",
                  ignore_errors=False, ignore_not_existed_files=False,
                  disable_order_dict=False):
@@ -99,6 +112,7 @@ class MetaYaml(object):
             self.data = defaults or {}
         else:
             self.data = OrderedDict(defaults) if defaults else {}
+        self.data["cp"] = self.cp
 
         self.cache_template = defaultdict(lambda: {})
         self.ignore_errors = ignore_errors
@@ -116,6 +130,8 @@ class MetaYaml(object):
 
         self.substitute(self.data, self.data, [os.path.basename(files[0])], False)
         self.data.pop(self._extend_key_word, None)
+        if self.data["cp"] == self.cp:
+            del self.data["cp"]
 
     def extend_filename(self, file_list, path=None):
         files = []

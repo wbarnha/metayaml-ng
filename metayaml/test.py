@@ -58,5 +58,19 @@ class TestMetaYaml(TestCase):
                  disable_order_dict=True)
         self.assertEqual(type(d), dict)
 
+    def test_cp(self):
+        d = read(self._file_name("cp.yaml"))
+        schedule = d["schedule"]
+        self.assertEqual(schedule["nighttask"]["min"], 5)
+        self.assertEqual(schedule["nighttask"]["hour"], 0)
+
+        self.assertEqual(schedule["daytask"]["min"], 7)
+        self.assertEqual(schedule["daytask"]["hour"], 13)
+
+        self.assertEqual(schedule["monthtask"]["min"], 0)
+        self.assertEqual(schedule["monthtask"]["day"], 2)
+
+        self.assertEqual(d["deploy"]["elb"], ["1.1.1.1", "2.2.2.2", "3.3.3.3", "4.4.4.4", "5.5.5.5"])
+
 if __name__ == '__main__':
     main()

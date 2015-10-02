@@ -212,7 +212,6 @@ keys from base file or add some values to list. For example
       country_codes:
          - LR         # after merge country_codes contains only one element.
 
-
       country_codes_3:
         ${__extend__}:
           - LBR       # the result list is ["CHN", "HND", "MDG", "LBR"]
@@ -241,6 +240,50 @@ The result of the code::
             ]
         }
     }
+
+
+Copy method
+===========
+
+There is method 'cp' which copy dict/list with extending::
+
+    cron:
+      daily:
+        min: 0
+        hour: 0
+
+      monthly:
+        min: 0
+        hour: 0
+        day: 1
+
+    schedule:
+      nighttask: ${cp(cron.daily, min=5)}  # min will be replaced to 5
+      #  min: 5
+      #  hour: 0
+      daytask: ${cp(cron.daily, min=7, hour=13)} # min and hour are replaced
+      #  min: 7
+      #  hour: 13
+      monthtask: ${cp(cron.monthly, day=2)}
+      #  min: 0
+      #  hour: 0
+      #  day: 2
+
+    deploy:
+      subnets:
+        - 1.1.1.1
+        - 2.2.2.2
+
+      base_elb:
+        - 4.4.4.4
+        - 5.5.5.5
+
+      elb: ${cp(deploy.subnets, "3.3.3.3", *deploy.base_elb)}
+      # - 1.1.1.1
+      # - 2.2.2.2
+      # - 3.3.3.3
+      # - 4.4.4.4
+      # - 5.5.5.5
 
 
 License

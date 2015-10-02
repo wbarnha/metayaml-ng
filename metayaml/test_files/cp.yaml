@@ -1,0 +1,30 @@
+cron:
+  hourly:
+    min: 0
+
+  daily:
+    min: 0
+    hour: 0
+
+  monthly:
+    min: 0
+    hour: 0
+    day: 1
+
+schedule:
+  nighttask: ${cp(cron.daily, min=5)}
+  daytask: ${cp(cron.daily, min=7, hour=13)}
+  monthtask: ${cp(cron.monthly, day=2)}
+
+
+deploy:
+  subnets:
+    - 1.1.1.1
+    - 2.2.2.2
+
+  base_elb:
+    - 4.4.4.4
+    - 5.5.5.5
+
+  elb: ${cp(deploy.subnets, "3.3.3.3", *deploy.base_elb)}
+
