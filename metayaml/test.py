@@ -72,5 +72,13 @@ class TestMetaYaml(TestCase):
 
         self.assertEqual(d["deploy"]["elb"], ["1.1.1.1", "2.2.2.2", "3.3.3.3", "4.4.4.4", "5.5.5.5"])
 
+    def test_not_parsible_defaults(self):
+        not_parsible = "\[\e]0;\u@\h: \w\a\]${debian_chroot:+($(debian_chroot)}\u@\h:\w\$"
+        d = read(self._file_name("test.yaml"),
+                 {"env": {"PS1": not_parsible},
+                  "join": os.path.join})
+        self.assertEqual(d["env"]["PS1"], not_parsible)
+
+
 if __name__ == '__main__':
     main()
