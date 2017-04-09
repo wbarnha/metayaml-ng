@@ -2,6 +2,7 @@ import os
 import jinja2
 import yaml
 import six
+from copy import deepcopy
 from collections import MutableMapping, defaultdict, Iterable, Mapping
 from glob import glob
 import yaml.constructor
@@ -80,9 +81,9 @@ class MetaYaml(object):
 
     def cp(self, source, *args, **kwargs):
         if isinstance(source, Mapping):
-            result = source.copy()
+            result = deepcopy(source)
             for arg in args:
-                source.update(arg)
+                result.update(arg)
             result.update(kwargs)
             return result
         elif isinstance(source, (list, tuple)):
