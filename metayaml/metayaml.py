@@ -110,10 +110,9 @@ class MetaYaml(object):
         self._extend_key_word = extend_key_word
         self.disable_order_dict = disable_order_dict or (not OrderedDict)
         self.parsed_ids = set()
-        if disable_order_dict:
-            self.data = defaults or {}
-        else:
-            self.data = OrderedDict(defaults) if defaults else {}
+        self.data = defaults or {}
+        if not disable_order_dict:
+            self.data = OrderedDict(self.data)
         self.data["cp"] = self.cp
 
         self.cache_template = defaultdict(lambda: {})

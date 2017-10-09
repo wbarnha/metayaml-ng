@@ -2,6 +2,7 @@
 import os
 from unittest import main, TestCase
 from metayaml import read, MetaYamlException
+from collections import OrderedDict
 
 
 class TestMetaYaml(TestCase):
@@ -81,6 +82,7 @@ class TestMetaYaml(TestCase):
 
     def test_order(self):
         d = read(self._file_name("test_order.yaml"))
+        self.assertIsInstance(d, OrderedDict)
         self.assertEqual(list(d["schedule"].keys()), [60*60, 60*60*24, 60*60*24*30, 60*60*24*365])
 
 
