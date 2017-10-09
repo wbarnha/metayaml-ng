@@ -79,6 +79,10 @@ class TestMetaYaml(TestCase):
                   "join": os.path.join})
         self.assertEqual(d["env"]["PS1"], not_parsible)
 
+    def test_order(self):
+        d = read(self._file_name("test_order.yaml"))
+        self.assertEqual(list(d["schedule"].keys()), [60*60, 60*60*24, 60*60*24*30, 60*60*24*365])
+
 
 if __name__ == '__main__':
     main()
