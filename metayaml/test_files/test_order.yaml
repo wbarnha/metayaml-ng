@@ -1,8 +1,8 @@
 MINUTE: 60
-HOUR: $(60*60)
-DAY: $(HOUR*24)
-MONTH: $(DAY*30)
-YEAR: $(DAY*365)
+HOUR: ${60*60}
+DAY: ${HOUR*24}
+MONTH: ${DAY*30}
+YEAR: ${DAY*365}
 
 schedule:
   $(HOUR): "each hour"
