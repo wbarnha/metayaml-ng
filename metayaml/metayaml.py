@@ -203,7 +203,7 @@ class MetaYaml(object):
         path = path or tuple()
         if isinstance(value, MutableMapping):
             to_remove = []
-            for key, val in six.iteritems(value):
+            for key, val in list(six.iteritems(value)):
                 new_path = path + (_to_str(key), )
                 new_key = self.eval_value(key, new_path, data, eager)
                 if new_key != key:
