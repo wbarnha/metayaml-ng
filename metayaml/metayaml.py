@@ -109,7 +109,6 @@ class MetaYaml(object):
 
         self._extend_key_word = extend_key_word
         self.disable_order_dict = disable_order_dict or (not OrderedDict)
-        self.parsed_ids = set()
         self.data = defaults or {}
         if not disable_order_dict:
             self.data = OrderedDict(self.data)
@@ -121,7 +120,6 @@ class MetaYaml(object):
         self.processed_files = set()
         self.eval_value = self._simple_eval_value
         self.substitute(self.data, self.data, ("defaults:", ), False)
-        self.defaults_ids = self.parsed_ids.copy()
         self.eval_value = self._eval_value
 
         if isinstance(yaml_file, six.string_types):
@@ -133,7 +131,6 @@ class MetaYaml(object):
         for filename in files:
             self.load(filename, self.data)
 
-        self.parsed_ids = self.defaults_ids
         self.substitute(self.data, self.data, (os.path.basename(files[0]), ), False)
         self.data.pop(self._extend_key_word, None)
         if self.data["cp"] == self.cp:
@@ -235,17 +232,13 @@ class MetaYaml(object):
         return s
 
     def _simple_eval_value(self, val, path, data, eager):
-        self.parsed_ids.add(id(val))
         return val
 
     # noinspection PyUnresolvedReferences
     def _eval_value(self, val, path, data, eager):
         if not isinstance(val, six.string_types):
             return val
-        if id(val) in self.parsed_ids:
-            return val
 
-        self.parsed_ids.add(id(val))
         brackets = self.eager_brackets if eager else self.lazy_brackets
         if brackets[0] not in val:
             return val
@@ -258,7 +251,9 @@ class MetaYaml(object):
         t = cache.get(val)
         if t is None:
             try:
-                t = jinja2.Template(val, variable_start_string=brackets[0], variable_end_string=brackets[1])
+                undefined = jinja2.Undefined if self.ignore_errors else jinja2.StrictUndefined
+                t = jinja2.Template(val, variable_start_string=brackets[0], variable_end_string=brackets[1],
+                                    undefined=undefined)
             except Exception as e:
                 if not self.ignore_errors:
                     raise MetaYamlException("Template compiling error of key: %s, value: %s, error: %s" % (
@@ -266,12 +261,17 @@ class MetaYaml(object):
             cache[val] = t
         try:
             data_str_key = {_to_str(k): v for k, v in six.iteritems(data)}
-            r = list(t.root_render_func(t.new_context(data_str_key)))
-            if len(r) == 1:
-                result = r[0]
+            rendered = list(t.root_render_func(t.new_context(data_str_key)))
+            if len(rendered) == 1:
+                if rendered[0] is jinja2.Undefined and not self.ignore_errors:
+                    raise MetaYamlException("Incorrect template for path: %s, value: %s" % (
+                        self._path_to_str(path), val))
+                result = rendered[0]
             else:
-                r = [_to_str(rr) for rr in r]
-                result = six.u("").join(r)
+                rendered = [_to_str(rr) for rr in rendered]
+                result = six.u("").join(rendered)
+        except MetaYamlException:
+            raise
         except Exception as e:
             result = val
             if not self.ignore_errors:

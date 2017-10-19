@@ -77,8 +77,8 @@ class TestMetaYaml(TestCase):
         not_parsible = r"${debian_chroot}:+($(debian_chroot)}\u@\h$"
         d = read(self._file_name("test.yaml"),
                  {"env": {"PS1": not_parsible},
-                  "join": os.path.join})
-        self.assertEqual(d["env"]["PS1"], not_parsible)
+                  "join": os.path.join}, ignore_errors=True)
+        self.assertEqual(d["env"]["PS1"], ":+(}\\u@\\h$")
 
     def test_order(self):
         d = read(self._file_name("test_order.yaml"))

@@ -8,4 +8,4 @@ schedule:
   $(HOUR): "each hour"
   $(DAY): "each day"
   $(MONTH): "each month"
-  $(YEAR): "each year"
+  $(YEAR): "each year ${MINUTE}"
