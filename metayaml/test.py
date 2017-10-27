@@ -85,6 +85,12 @@ class TestMetaYaml(TestCase):
         self.assertIsInstance(d, OrderedDict)
         self.assertEqual(list(d["schedule"].keys()), [60*60, 60*60*24, 60*60*24*30, 60*60*24*365])
 
+    def test_unknown(self):
+        with self.assertRaises(MetaYamlException):
+            read(self._file_name("undef.yaml"))
+        with self.assertRaises(MetaYamlException):
+            read(self._file_name("undef2.yaml"))
+
 
 if __name__ == '__main__':
     main()

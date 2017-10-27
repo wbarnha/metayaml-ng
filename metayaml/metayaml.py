@@ -263,7 +263,7 @@ class MetaYaml(object):
             data_str_key = {_to_str(k): v for k, v in six.iteritems(data)}
             rendered = list(t.root_render_func(t.new_context(data_str_key)))
             if len(rendered) == 1:
-                if rendered[0] is jinja2.Undefined and not self.ignore_errors:
+                if isinstance(rendered[0], undefined) and not self.ignore_errors:
                     raise MetaYamlException("Incorrect template for path: %s, value: %s" % (
                         self._path_to_str(path), val))
                 result = rendered[0]
