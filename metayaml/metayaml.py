@@ -249,9 +249,9 @@ class MetaYaml(object):
 
         cache = self.cache_template[eager]
         t = cache.get(val)
+        undefined = jinja2.Undefined if self.ignore_errors else jinja2.StrictUndefined
         if t is None:
             try:
-                undefined = jinja2.Undefined if self.ignore_errors else jinja2.StrictUndefined
                 t = jinja2.Template(val, variable_start_string=brackets[0], variable_end_string=brackets[1],
                                     undefined=undefined)
             except Exception as e:
