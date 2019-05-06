@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="metayaml",
-    version="0.22",
+    version="0.23-dev",
     author="Anton Tagunov",
     packages=["metayaml"],
     package_data={'': ['test_files/*.yaml']},
@@ -18,7 +18,7 @@ setup(
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Natural Language :: English",
-        "License :: OSI Approved :: Apache Software License",
+        "License :: OSI Approved :: MIT license",
         "Environment :: Other Environment",
         "Operating System :: OS Independent",
         "Topic :: Software Development :: Libraries :: Python Modules"]

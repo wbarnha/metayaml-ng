@@ -78,8 +78,10 @@ class MetaYaml(object):
     DEL_MARKER = "${__del__}"
     DEL_ALL_MARKER = "${__del_all__}"
     EXTEND_MARKER = "${__extend__}"
+    INHERIT_MARKER = "${__inherit__}"
 
-    def cp(self, source, *args, **kwargs):
+    @staticmethod
+    def cp(source, *args, **kwargs):
         if isinstance(source, Mapping):
             result = deepcopy(source)
             for arg in args:
@@ -118,9 +120,6 @@ class MetaYaml(object):
         self.ignore_errors = ignore_errors
         self.ignore_not_existed_files = ignore_not_existed_files
         self.processed_files = set()
-        self.eval_value = self._simple_eval_value
-        self.substitute(self.data, self.data, ("defaults:", ), False)
-        self.eval_value = self._eval_value
 
         if isinstance(yaml_file, six.string_types):
             yaml_file = [yaml_file]
@@ -190,24 +189,35 @@ class MetaYaml(object):
                 except IOError as e:
                     raise FileNotFound("Open file %s error from %s: %s" % (file_name, path, e))
 
-        self._merge(data, file_data, data)
+        self._merge(data, file_data, data, tuple())
         self.substitute(data, data, basename, eager=True)
 
         return data
 
     def substitute(self, value, data, path, eager):
-        path = path or tuple()
         if isinstance(value, MutableMapping):
-            to_remove = []
-            for key, val in list(six.iteritems(value)):
-                new_path = path + (_to_str(key), )
-                new_key = self.eval_value(key, new_path, data, eager)
-                if new_key != key:
-                    to_remove.append(key)
-                value[new_key] = self.substitute(val, data, new_path, eager)
+            active_dict = value
+            inherit = value.pop(self.INHERIT_MARKER, None)
+            if inherit:
+                target_dict = self.eval_value("%s%s%s" % (self.eager_brackets[0], inherit, self.eager_brackets[1]),
+                                              path + ("__inherit__", ), data, eager)
+                if not isinstance(active_dict, MutableMapping):
+                    raise MetaYamlException("%s value must be dict for path: %s" % (
+                        self.INHERIT_MARKER, self._path_to_str(path)))
+                dict_snapshot = active_dict.copy()
+                active_dict.clear()
+                active_dict.update(target_dict)
+                self._merge(active_dict, dict_snapshot, data, path)
+            else:
+                dict_snapshot = active_dict.copy()
 
-            for k in to_remove:
-                del value[k]
+                for key, val in six.iteritems(dict_snapshot):
+                    new_path = path + (_to_str(key), )
+                    new_key = self.eval_value(key, new_path, data, eager)
+                    if new_key != key:
+                        del active_dict[key]
+                    active_dict[new_key] = self.substitute(val, data, new_path, eager)
+
         elif isinstance(value, list):
             for key in range(len(value)):
                 value[key] = self.substitute(value[key], data, path + (_to_str(key), ), eager)
@@ -231,11 +241,8 @@ class MetaYaml(object):
             s = s[1:]
         return s
 
-    def _simple_eval_value(self, val, path, data, eager):
-        return val
-
     # noinspection PyUnresolvedReferences
-    def _eval_value(self, val, path, data, eager):
+    def eval_value(self, val, path, data, eager):
         if not isinstance(val, six.string_types):
             return val
 
@@ -289,9 +296,7 @@ class MetaYaml(object):
 
         return result
 
-    def _merge(self, a, b, data, path=None):
-        if path is None:
-            path = tuple()
+    def _merge(self, a, b, data, path):
         for key, b_value in six.iteritems(b):
             if key == self.DEL_MARKER:
                 new_value = self.substitute(b_value, data, path + (str(key), ), True)
@@ -308,7 +313,7 @@ class MetaYaml(object):
                 continue
             a_value = a.get(key)
             if isinstance(a_value, MutableMapping) and isinstance(b_value, MutableMapping):
-                self._merge(a[key], b_value, path + (str(key), ))
+                self._merge(a[key], b_value, data, path + (str(key), ))
             elif (isinstance(a_value, list) and isinstance(b_value, MutableMapping) and
                   len(b_value) == 1 and self.EXTEND_MARKER in b_value):
                 extend = b_value[self.EXTEND_MARKER]

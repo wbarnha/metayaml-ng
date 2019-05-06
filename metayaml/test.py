@@ -14,6 +14,7 @@ class TestMetaYaml(TestCase):
 
     def test_myaml(self):
         d = read(self._file_name("test.yaml"), {"CWD": os.getcwd(), "join": os.path.join})
+
         self.assertIn("v1", d["main"]["test1"])
         self.assertNotIn("v3", d["main"]["test1"])
         self.assertEqual(d["main"]["test1"][1]["v2"], {'a': u'a', 'b': u'b'})
@@ -90,6 +91,24 @@ class TestMetaYaml(TestCase):
             read(self._file_name("undef.yaml"))
         with self.assertRaises(MetaYamlException):
             read(self._file_name("undef2.yaml"))
+
+    def test_inherit(self):
+        d = read(self._file_name("inherit.yaml"), disable_order_dict=True)
+        bar = d["bar"]
+        self.assertEqual(bar, {"baz": 1, "buz": 33, "foobar": 3})
+
+        baz = d["baz"]
+        expected = {
+            "foobar": [4, 5],
+            "bar":
+                {
+                    "baz": 44,
+                    "buz": 55,
+                    "foobar": 3
+
+                }
+        }
+        self.assertEqual(baz, expected)
 
 
 if __name__ == '__main__':

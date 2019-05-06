@@ -79,7 +79,7 @@ The order and sequence of file processing is shown in the following table:
 Expression syntax
 -----------------
 
-Metayaml support any python valid expression. For this expression should be enclosed in brackets ${} or $().
+Metayaml supports any python valid expression. For this expression should be enclosed in brackets ${} or $().
 The first brackets is used for eager substitute and $() for laze. I.e. expressions in $() are applied after
 full read file and its include files but ${} during file read.
 
@@ -280,6 +280,28 @@ There is method 'cp' which copy dict/list with extending::
       # - 3.3.3.3
       # - 4.4.4.4
       # - 5.5.5.5
+
+
+Inherit method
+==============
+
+There are another way to copy existed dict and update some fields::
+
+    foo:
+      bar:
+        baz: 1
+        buz: 2
+        foobar: 3
+      foobar: [4, 5]
+
+    bar:
+      ${__inherit__}: foo.bar  # bar will be replaces by content of for.bar
+      buz: 33
+
+    # the result value of 'bar' will be
+    #    baz: 1
+    #    buz: 33
+    #    foobar: 3
 
 
 License
