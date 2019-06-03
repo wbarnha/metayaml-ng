@@ -2,5 +2,7 @@
 *.py[co]
 *.log
 *.egg-info/
+.eggs/
 dist/*
 build/*
+venv/*
