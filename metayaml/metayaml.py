@@ -206,7 +206,7 @@ class MetaYaml(object):
                         self.INHERIT_MARKER, self._path_to_str(path)))
                 dict_snapshot = active_dict.copy()
                 active_dict.clear()
-                active_dict.update(target_dict)
+                active_dict.update(deepcopy(target_dict))
                 self._merge(active_dict, dict_snapshot, data, path)
             else:
                 dict_snapshot = active_dict.copy()

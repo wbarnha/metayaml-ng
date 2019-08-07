@@ -110,6 +110,11 @@ class TestMetaYaml(TestCase):
         }
         self.assertEqual(baz, expected)
 
+    def test_inherit_deep_copy(self):
+        d = read(self._file_name("inherit_deepcp.yaml"), disable_order_dict=True)
+        self.assertTrue(d["test"]["foo"]["bar"])
+        self.assertFalse(d["test2"]["foo"]["bar"])
+
 
 if __name__ == '__main__':
     main()
