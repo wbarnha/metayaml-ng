@@ -164,13 +164,9 @@ class MetaYaml(object):
             loader = yaml.Loader if self.disable_order_dict else OrderedDictYAMLLoader
             file_data = yaml.load(f, loader) or {}
 
-        data[self._extend_key_word] = file_data.get(self._extend_key_word, [])
-        self.substitute(data[self._extend_key_word], data, basename, eager=True)
-
-        extends = data[self._extend_key_word]
-
+        extends = file_data.get(self._extend_key_word, [])
         if extends:
-            self.substitute(data, data, basename, eager=True)
+            extends = self.substitute(extends, data, basename + (self._extend_key_word, ), eager=True)
             if isinstance(extends, six.string_types):
                 extends = [extends]
 
