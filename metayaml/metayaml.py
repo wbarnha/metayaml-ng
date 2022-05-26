@@ -3,7 +3,7 @@ import jinja2
 import yaml
 import six
 from copy import deepcopy
-from collections import MutableMapping, defaultdict, Iterable, Mapping
+from collections import defaultdict
 from glob import glob
 import yaml.constructor
 try:
@@ -13,8 +13,10 @@ except ImportError:
 
 if six.PY2:
     getcwd = lambda filename: os.getcwdu() if isinstance(filename, unicode) else os.getcwd()
+    from collections import MutableMapping, Iterable, Mapping
 else:
     getcwd = lambda filename: os.getcwd()
+    from collections.abc import MutableMapping, Iterable, Mapping
 
 if OrderedDict:
     class OrderedDictYAMLLoader(yaml.Loader):
