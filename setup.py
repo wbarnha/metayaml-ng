@@ -9,7 +9,7 @@ setup(
     url="https://bitbucket.org/atagunov/metayaml/",
     description="Enhancements of yaml format to support include and python expression",
     long_description=open('README.rst').read(),
-    install_requires=['jinja2', 'PyYAML', 'six'],
+    install_requires=['jinja2<=2.11.3', 'PyYAML', 'six'],
     include_package_data=True,
     test_suite="metayaml.test",
     classifiers=[
