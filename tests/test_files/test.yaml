@@ -22,10 +22,10 @@ all:
   - $(f3)
 
 test_rec:
-  a: ${test_rec.b}
   b: b
+  a: ${test_rec.b}
+  d: $(test_rec.c)
   c: ${test_rec.d}
-  d: ${test_rec.c}
 
 
 test_math: ${10*60*1.5}

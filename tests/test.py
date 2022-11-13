@@ -2,7 +2,6 @@
 import os
 from unittest import main, TestCase
 from metayaml import read, MetaYamlException
-from collections import OrderedDict
 
 
 class TestMetaYaml(TestCase):
@@ -55,11 +54,6 @@ class TestMetaYaml(TestCase):
         self.assertEqual(d["main"]["remove_all_from_here"], {8: 8})
         self.assertEqual(d["main"]["test1"], ["v3", "v4", "v5"])
 
-    def test_disable_order_dict(self):
-        d = read(self._file_name("test.yaml"), {"CWD": os.getcwd(), "join": os.path.join},
-                 disable_order_dict=True)
-        self.assertEqual(type(d), dict)
-
     def test_cp(self):
         d = read(self._file_name("cp.yaml"))
         schedule = d["schedule"]
@@ -79,11 +73,10 @@ class TestMetaYaml(TestCase):
         d = read(self._file_name("test.yaml"),
                  {"env": {"PS1": not_parsible},
                   "join": os.path.join}, ignore_errors=True)
-        self.assertEqual(d["env"]["PS1"], ":+(}\\u@\\h$")
+        self.assertEqual(d["env"]["PS1"], "${debian_chroot}:+(}\\u@\\h$")
 
     def test_order(self):
         d = read(self._file_name("test_order.yaml"))
-        self.assertIsInstance(d, OrderedDict)
         self.assertEqual(list(d["schedule"].keys()), [60*60, 60*60*24, 60*60*24*30, 60*60*24*365])
 
     def test_unknown(self):
@@ -93,7 +86,7 @@ class TestMetaYaml(TestCase):
             read(self._file_name("undef2.yaml"))
 
     def test_inherit(self):
-        d = read(self._file_name("inherit.yaml"), disable_order_dict=True)
+        d = read(self._file_name("inherit.yaml"))
         bar = d["bar"]
         self.assertEqual(bar, {"baz": 1, "buz": 33, "foobar": 3})
 
@@ -111,9 +104,20 @@ class TestMetaYaml(TestCase):
         self.assertEqual(baz, expected)
 
     def test_inherit_deep_copy(self):
-        d = read(self._file_name("inherit_deepcp.yaml"), disable_order_dict=True)
+        d = read(self._file_name("inherit_deepcp.yaml"))
         self.assertTrue(d["test"]["foo"]["bar"])
         self.assertFalse(d["test2"]["foo"]["bar"])
+
+    def test_inherit_list(self):
+        d = read(self._file_name("inherit_subst.yaml"))
+        expected = {
+            'a': {'aa': 1, 'bb': 6},
+            'b': {'a': 2, 'aa': 1, 'b': 2, 'bb': 6},
+            'bar': 6,
+            'foo': {'a': 2, 'b': 2}
+        }
+
+        self.assertEqual(d, expected)
 
 
 if __name__ == '__main__':

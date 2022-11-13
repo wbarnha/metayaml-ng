@@ -1,13 +1,12 @@
 extend:
   - f1.yaml
 main:
-  ${__del__}: test_f1
+  test_f1: ${__del__}
   utc: 0
   moscow: 4
   all:
-    ${__del__}:
-      - f1
-      - f2
+    f1: ${__del__}
+    f2: ${__del__}
 
   test1:
     ${__extend__}:

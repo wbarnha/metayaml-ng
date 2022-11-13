@@ -1,0 +1,13 @@
+foo:
+  a: 2
+  b: 2
+bar: 6
+
+a:
+  aa: 1
+  bb: ${bar}
+
+b:
+  ${__inherit__}: foo
+  aa: 1
+  bb: ${bar}

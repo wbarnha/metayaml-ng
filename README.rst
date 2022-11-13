@@ -202,7 +202,7 @@ keys from base file or add some values to list. For example
       - base.yaml
     main:
       iso_3166:
-         ${__del__}: China  #  key 'China' will be removed from the result
+         China: ${__del__}  #  key 'China' will be removed from the result
          Liberia: LR  # add new key
 
       country_codes:
