@@ -1,4 +1,5 @@
 import os
+import datetime
 import typing as tp
 from collections import defaultdict
 from collections.abc import Iterable, MutableMapping
@@ -154,6 +155,8 @@ class MetaYaml(object):
     ) -> tp.Tuple[bool, tp.Union[str, int, float, None]]:
         if value is None or isinstance(value, (int, float, bool)):
             return True, value
+        if isinstance(value, datetime.date):
+            value = str(value)
         if isinstance(value, str):
             return True, self.eval_value(value, path, global_data, eager)
         # complex type, return as is
