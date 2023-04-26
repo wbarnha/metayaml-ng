@@ -51,9 +51,6 @@ jobs:
           path: dist/${{ env.sdist-name }}
           retention-days: 15
 
-#  lint:
-#    uses: ./.github/workflows/lint.yml
-
   test-pytest:
     name: Tests on ${{ matrix.python-version }}
     needs: build-sdist
@@ -89,7 +86,7 @@ jobs:
         run: |
           pip install -U -r requirements-dev.txt
       - name: Run tests
-        run: python -m pytest --cov=aiomonitor -v tests
+        run: python -m pytest -v tests/*
       - name: Upload coverage data
         uses: codecov/codecov-action@v3
 
@@ -98,7 +95,6 @@ jobs:
     if: always()
     needs:
       - build-sdist
-#      - lint
       - test-pytest
     runs-on: ubuntu-latest
     steps:
