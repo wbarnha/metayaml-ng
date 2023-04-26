@@ -1,0 +1,11 @@
+MINUTE: 60
+HOUR: ${60*60}
+DAY: ${HOUR*24}
+MONTH: ${DAY*30}
+YEAR: ${DAY*365}
+
+schedule:
+  $(HOUR): "each hour"
+  $(DAY): "each day"
+  $(MONTH): "each month"
+  $(YEAR): "each year ${MINUTE}"

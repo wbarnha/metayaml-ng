@@ -1,0 +1,10 @@
+extend:
+  - f3.yaml
+
+f2: test2
+
+main:
+  test_f2: true
+  all:
+    f2: true
+

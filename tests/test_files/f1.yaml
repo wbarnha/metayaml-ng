@@ -1,0 +1,18 @@
+f1: test_f1
+
+main:
+  test_f1: true
+  all:
+    f1: true
+  test1:
+    - v3
+  remove_all_from_here:
+    1: 0
+    2: 1
+    3: 5
+    7: 21
+
+
+test_path: ${join("a", "b", "c")}
+
+test_lazy_template: $(f3*3)  # f3 is declared in f3.yaml file

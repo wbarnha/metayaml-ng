@@ -1,0 +1,20 @@
+extend:
+  - f1.yaml
+main:
+  test_f1: ${__del__}
+  utc: 0
+  moscow: 4
+  all:
+    f1: ${__del__}
+    f2: ${__del__}
+
+  test1:
+    ${__extend__}:
+       - v4
+       - v5
+
+  remove_all_from_here:
+    ${__del_all__}:
+    8: 8
+
+f3: 9

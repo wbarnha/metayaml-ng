@@ -1,0 +1,6 @@
+f3: 3
+
+main:
+  test_f2:
+  all:
+    f3: false

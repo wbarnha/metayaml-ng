@@ -1,0 +1,39 @@
+extend:
+  - f1.yaml
+  - f2.yaml
+
+
+main:
+  test1:
+    - v1
+    - v2:
+        a: a
+        b: b
+
+  all:
+
+
+test2: ${main.test1}
+
+
+all:
+  - $(f1)
+  - $(f2)
+  - $(f3)
+
+test_rec:
+  b: b
+  a: ${test_rec.b}
+  d: $(test_rec.c)
+  c: ${test_rec.d}
+
+
+test_math: ${10*60*1.5}
+test_math_str: ${10*60*1.5} sec
+
+
+2*5: ${100/10}
+
+10: 20
+
+Русский текст: тест!!!!

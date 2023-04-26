@@ -1,0 +1,17 @@
+foo:
+  bar:
+    baz: 1
+    buz: 2
+    foobar: 3
+  foobar: [4, 5]
+
+bar:
+  ${__inherit__}: foo.bar
+  buz: 33
+
+
+baz:
+  ${__inherit__}: foo
+  bar:
+    baz: 44
+    buz: 55

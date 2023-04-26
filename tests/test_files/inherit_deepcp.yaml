@@ -1,0 +1,8 @@
+test:
+  foo:
+    bar: true
+
+test2:
+  ${__inherit__}: test
+  foo:
+    bar: false
