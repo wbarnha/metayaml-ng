@@ -197,7 +197,7 @@ class MetaYaml(object):
                     if not isinstance(added_values, list):
                         raise MetaYamlExceptionPath(f"expected list, but have got {type(added_values)}",
                                                     path + (self.EXTEND_MARKER, ), added_values)
-                    added_values = self.eval_value(added_values, path, global_data, True)
+                    added_values, _ = self.eval_expression(added_values, global_data, path, True)
                     dest.extend(added_values)
                     return dest
                 else:
@@ -228,21 +228,21 @@ class MetaYaml(object):
 
         return jinja_eval_value(self, val, path, global_data, eager, brackets)
 
-    def process_lazy(self, data, global_data, path: Path) -> tp.Tuple[tp.Any, bool]:
+    def eval_expression(self, data, global_data, path: Path, eager: bool) -> tp.Tuple[tp.Any, bool]:
         # the first item in result is evaluated value
         # the second item is true when value was substituted
         if isinstance(data, (float, int, bool)):
             return data, False
 
         if isinstance(data, str):
-            evaluated_value = self.eval_value(data, path, global_data, False)
+            evaluated_value = self.eval_value(data, path, global_data, eager)
             return evaluated_value, evaluated_value != data
 
         substituted = False
         if isinstance(data, dict):
             for key, value in list(data.items()):
                 evaluated_key = self.eval_value(key, _path(path, key), global_data, False)
-                evaluated_value, changed = self.process_lazy(value, global_data, _path(path, key))
+                evaluated_value, changed = self.eval_expression(value, global_data, _path(path, key), eager=eager)
                 substituted |= changed
                 if key != evaluated_key:
                     data.pop(key)
@@ -252,12 +252,16 @@ class MetaYaml(object):
 
         if isinstance(data, list):
             for index, value in enumerate(data):
-                evaluated_value, changed = self.process_lazy(value, global_data, _path(path, index, index=True))
+                evaluated_value, changed = self.eval_expression(value, global_data,
+                                                                _path(path, index, index=True), eager)
                 if changed:
-                    data[index] = changed
+                    data[index] = evaluated_value
                     substituted = True
             return data, substituted
         return data, False
+
+    def process_lazy(self, data, global_data, path: Path) -> tp.Tuple[tp.Any, bool]:
+        return self.eval_expression(data, global_data, path, False)
 
 
 def read(yaml_file, defaults=None, extend_key_word="extend", ignore_errors=False,

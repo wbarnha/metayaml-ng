@@ -1,0 +1,13 @@
+extend:
+  - foo_data.yaml
+
+foo1: bar1
+
+zz: $(hour*5)
+
+data:
+  ${__extend__}:
+  - a: 1${foo1}
+  - b: yy
+  - c: $(hour*5)
+  - d${foo1}

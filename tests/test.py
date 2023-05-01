@@ -119,6 +119,22 @@ class TestMetaYaml(TestCase):
 
         self.assertEqual(d, expected)
 
+    def test_list_extend(self):
+        d = read(self._file_name("list_eval.yaml"))
+        expected = {
+            "foo1": "bar1",
+            "foo2": "bar2",
+            "hour": 3600,
+            "zz": 60 * 60 * 5,
+            "data": [
+                {"a2": "2bar2"},
+                {"a": "1bar1"},
+                {"b": "yy"},
+                {"c": 60 * 60 * 5},
+                "dbar1"
+            ]
+        }
+        self.assertEqual(d, expected)
 
 if __name__ == '__main__':
     main()

@@ -1,0 +1,6 @@
+foo2: bar2
+
+data:
+  - a2: 2${foo2}
+
+hour: ${60*60}

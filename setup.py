@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="metayaml",
-    version="1.0",
+    version="1.1",
     author="Anton Tagunov",
     packages=["metayaml"],
     url="https://bitbucket.org/atagunov/metayaml/",
