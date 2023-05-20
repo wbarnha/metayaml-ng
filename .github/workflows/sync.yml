@@ -4,9 +4,8 @@ env:
   UPSTREAM_URL: "https://bitbucket.org/atagunov/metayaml.git"
   WORKFLOW_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   UPSTREAM_BRANCH: "master"
-#   DOWNSTREAM_BRANCH: "sync-attempt-${{ github.run_id }}-${{ github.run_attempt }}"
-  DOWNSTREAM_BRANCH: "main"
-  FETCH_ARGS: "--unshallow"
+  DOWNSTREAM_BRANCH: "sync-attempt-${{ github.run_id }}-${{ github.run_attempt }}"
+  FETCH_ARGS: "--unshallow --all"
   MERGE_ARGS: ""
   PUSH_ARGS: ""
   SPAWN_LOGS: "false"
