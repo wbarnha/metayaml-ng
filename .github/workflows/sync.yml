@@ -5,7 +5,7 @@ env:
   WORKFLOW_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   UPSTREAM_BRANCH: "master"
   DOWNSTREAM_BRANCH: "sync-attempt-${{ github.run_id }}-${{ github.run_attempt }}"
-  FETCH_ARGS: "--allow-unrelated-histories"
+  FETCH_ARGS: "--unshallow"
   MERGE_ARGS: ""
   PUSH_ARGS: ""
   SPAWN_LOGS: "false"
