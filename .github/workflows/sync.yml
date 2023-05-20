@@ -23,7 +23,7 @@ env:
 # This runs every day on 2300 UTC
 on:
   schedule:
-    - cron: '0 22 45 * *'
+    - cron: '48 22 * * *'
   # Allows manual workflow run (must in default branch to work)
   workflow_dispatch:
 
