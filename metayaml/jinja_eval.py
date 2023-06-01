@@ -5,9 +5,7 @@ from metayaml.exception import MetaYamlExceptionPath
 
 
 class CodeGenerator(_CodeGenerator):
-    def _output_child_pre(
-        self, node: nodes.Expr, frame: Frame, finalize
-    ) -> None:
+    def _output_child_pre(self, node: nodes.Expr, frame: Frame, finalize) -> None:
         """Output extra source code before visiting a child of an
         ``Output`` node.
         """
@@ -36,10 +34,12 @@ def jinja_eval_value(loader, val, path, data, eager, brackets):
     undefined = jinja2.Undefined if loader.ignore_errors else jinja2.StrictUndefined
     if t is None:
         try:
-            t = Template(val,
-                         variable_start_string=brackets[0],
-                         variable_end_string=brackets[1],
-                         undefined=undefined)
+            t = Template(
+                val,
+                variable_start_string=brackets[0],
+                variable_end_string=brackets[1],
+                undefined=undefined,
+            )
         except Exception as e:
             if not loader.ignore_errors:
                 raise MetaYamlExceptionPath(f"Template compiling error: {e}", path, val)

@@ -2,6 +2,8 @@
 Meta Yaml
 =========
 
+Note: This is a fork of the project at https://bitbucket.org/atagunov/metayaml.
+
 Mata Yaml is several enhancements for yaml format that allow the following:
 
 * include one yaml file from another
