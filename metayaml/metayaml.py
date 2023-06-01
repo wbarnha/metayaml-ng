@@ -1,8 +1,11 @@
 import os
 import yaml
+import datetime
 import typing as tp
 from copy import deepcopy
 from collections import defaultdict
+from collections.abc import Iterable, MutableMapping
+from copy import deepcopy
 from glob import glob
 from collections.abc import MutableMapping, Iterable
 from metayaml.exception import MetaYamlException, FileNotFound, MetaYamlExceptionPath
@@ -14,7 +17,7 @@ def _path(path: Path, key: tp.Union[str, int], index=False):
     if not index:
         key = str(key)
 
-    return path + (key, )
+    return path + (key,)
 
 
 class MetaYaml(object):
@@ -40,18 +43,23 @@ class MetaYaml(object):
             return result
         raise MetaYamlException("cp method support only dict and list as source")
 
-    def __init__(self, yaml_file: tp.Union[str, tp.List[str]],
-                 defaults=None, extend_key_word="extend",
-                 ignore_errors=False, ignore_not_existed_files=False):
+    def __init__(
+        self,
+        yaml_file: tp.Union[str, tp.List[str]],
+        defaults=None,
+        extend_key_word="extend",
+        ignore_errors=False,
+        ignore_not_existed_files=False,
+    ):
         """
-          Reads and process yaml config files
+        Reads and process yaml config files
 
-          :param yaml_file
-          :type  yaml_file      str or list[str]
-          :param defaults       Dictionary with default values which can be use during parsing yaml files
-          :param extend_key_word  The name of section with list of included files
-          :param ignore_errors  Do not rise exception when value can't be rendered
-          :param ignore_not_existed_files Do not rise exception if the file not found
+        :param yaml_file
+        :type  yaml_file      str or list[str]
+        :param defaults       Dictionary with default values which can be use during parsing yaml files
+        :param extend_key_word  The name of section with list of included files
+        :param ignore_errors  Do not rise exception when value can't be rendered
+        :param ignore_not_existed_files Do not rise exception if the file not found
         """
 
         self._extend_key_word = extend_key_word
@@ -66,13 +74,15 @@ class MetaYaml(object):
         if isinstance(yaml_file, str):
             yaml_file = [yaml_file]
         else:
-            assert isinstance(yaml_file, Iterable), "yaml_file should be string or list of strings"
+            assert isinstance(
+                yaml_file, Iterable
+            ), "yaml_file should be string or list of strings"
 
         files = self.extend_filename(yaml_file)
         for filename in files:
             self.load(filename, self.data)
 
-        self.process_lazy(self.data, self.data, ("#", ))
+        self.process_lazy(self.data, self.data, ("#",))
         self.data.pop(self._extend_key_word, None)
         if self.data["cp"] == self.cp:
             del self.data["cp"]
@@ -103,37 +113,50 @@ class MetaYaml(object):
         file_dir = os.path.dirname(file_path)
 
         with open(file_path, "rb") as f:
-            file_data = yaml.load(f, yaml.Loader) or {}
+            file_data = yaml.load(f, yaml.FullLoader) or {}
             assert isinstance(file_data, dict)
 
         extends = file_data.pop(self._extend_key_word, [])
         if extends:
-            extends = self.eval(extends, data, key_path + (self._extend_key_word, ), eager=True)
+            extends = self.eval(
+                extends, data, key_path + (self._extend_key_word,), eager=True
+            )
             if isinstance(extends, str):
                 extends = [extends]
 
             if not isinstance(extends, list):
-                raise MetaYamlException("should be list of string or string",
-                                        key_path + (self._extend_key_word, ), extends)
+                raise MetaYamlException(
+                    "should be list of string or string",
+                    key_path + (self._extend_key_word,),
+                    extends,
+                )
 
             for file_name in extends:
                 if not isinstance(file_name, str):
-                    raise MetaYamlException("should be list of string or string",
-                                            key_path + (self._extend_key_word, ), extends)
+                    raise MetaYamlException(
+                        "should be list of string or string",
+                        key_path + (self._extend_key_word,),
+                        extends,
+                    )
 
             for file_name in self.extend_filename(extends, file_dir):
                 try:
                     self.load(file_name, data)
                 except IOError as e:
-                    raise FileNotFound(f"Open file '{file_name}' error from {file_path}: {e}")
+                    raise FileNotFound(
+                        f"Open file '{file_name}' error from {file_path}: {e}"
+                    )
 
         data = self.merge_data(file_data, data, data, key_path)
         return data
 
-    def _eval_simple_data(self, value, global_data: dict, path: Path, eager: bool) -> \
-            tp.Tuple[bool, tp.Union[str, int, float, None]]:
+    def _eval_simple_data(
+        self, value, global_data: dict, path: Path, eager: bool
+    ) -> tp.Tuple[bool, tp.Union[str, int, float, None]]:
         if value is None or isinstance(value, (int, float, bool)):
             return True, value
+        if isinstance(value, datetime.date):
+            value = str(value)
         if isinstance(value, str):
             return True, self.eval_value(value, path, global_data, eager)
         # complex type, return as is
@@ -151,11 +174,18 @@ class MetaYaml(object):
         inherit = source.pop(self.INHERIT_MARKER, None)
         if inherit:
             target_path = path + (self.INHERIT_MARKER,)
-            target_dict = self.eval_value(f"{self.eager_brackets[0]}{inherit}{self.eager_brackets[1]}",
-                                          target_path, global_data, True)
+            target_dict = self.eval_value(
+                f"{self.eager_brackets[0]}{inherit}{self.eager_brackets[1]}",
+                target_path,
+                global_data,
+                True,
+            )
             if not isinstance(target_dict, dict):
-                raise MetaYamlExceptionPath(f"inherit target should be dict, but it is {type(target_dict)}",
-                                            target_path, inherit)
+                raise MetaYamlExceptionPath(
+                    f"inherit target should be dict, but it is {type(target_dict)}",
+                    target_path,
+                    inherit,
+                )
 
             target_dict = deepcopy(target_dict)
             self._merge_dict(source, target_dict, global_data, path)
@@ -173,7 +203,9 @@ class MetaYaml(object):
 
             new_key = self.eval_value(key, new_path, global_data, False)
 
-            simple_data, evaluated_value = self._eval_simple_data(val, global_data, new_path, eager=True)
+            simple_data, evaluated_value = self._eval_simple_data(
+                val, global_data, new_path, eager=True
+            )
             if simple_data:
                 dest[new_key] = evaluated_value
             else:
@@ -182,9 +214,13 @@ class MetaYaml(object):
                     self.merge_data(val, dest_value, global_data, path)
                 else:
                     new_dest = None
-                    if isinstance(val, dict):  # add new dict to global data before full process
+                    if isinstance(
+                        val, dict
+                    ):  # add new dict to global data before full process
                         dest[new_key] = new_dest = {}
-                    dest[new_key] = self.merge_data(val, new_dest, global_data, new_path)
+                    dest[new_key] = self.merge_data(
+                        val, new_dest, global_data, new_path
+                    )
         return dest
 
     def merge_data(self, source, dest, global_data: dict, path: Path):
@@ -192,26 +228,41 @@ class MetaYaml(object):
             if dest is None:
                 dest = {}
             elif not isinstance(dest, dict):
-                if isinstance(dest, list) and len(source) == 1 and self.EXTEND_MARKER in source:
+                if (
+                    isinstance(dest, list)
+                    and len(source) == 1
+                    and self.EXTEND_MARKER in source
+                ):
                     added_values = source[self.EXTEND_MARKER]
                     if not isinstance(added_values, list):
-                        raise MetaYamlExceptionPath(f"expected list, but have got {type(added_values)}",
-                                                    path + (self.EXTEND_MARKER, ), added_values)
-                    added_values, _ = self.eval_expression(added_values, global_data, path, True)
+                        raise MetaYamlExceptionPath(
+                            f"expected list, but have got {type(added_values)}",
+                            path + (self.EXTEND_MARKER,),
+                            added_values,
+                        )
+                    added_values, _ = self.eval_expression(
+                        added_values, global_data, path, True
+                    )
                     dest.extend(added_values)
                     return dest
                 else:
-                    raise MetaYamlExceptionPath(f"dict can't be merged to {type(dest)}", path, source)
+                    raise MetaYamlExceptionPath(
+                        f"dict can't be merged to {type(dest)}", path, source
+                    )
             return self._merge_dict(source, dest, global_data, path)
 
         if isinstance(source, list):
             if dest is None:
                 dest = []
             elif not isinstance(dest, list):
-                raise MetaYamlExceptionPath(f"list can't be merged to {type(dest)}", path, source)
+                raise MetaYamlExceptionPath(
+                    f"list can't be merged to {type(dest)}", path, source
+                )
             dest.clear()
-            dest.extend(self.eval(item, global_data, path + (key,), True)
-                        for key, item in enumerate(source))
+            dest.extend(
+                self.eval(item, global_data, path + (key,), True)
+                for key, item in enumerate(source)
+            )
             return dest
 
         return source
@@ -228,7 +279,9 @@ class MetaYaml(object):
 
         return jinja_eval_value(self, val, path, global_data, eager, brackets)
 
-    def eval_expression(self, data, global_data, path: Path, eager: bool) -> tp.Tuple[tp.Any, bool]:
+    def eval_expression(
+        self, data, global_data, path: Path, eager: bool
+    ) -> tp.Tuple[tp.Any, bool]:
         # the first item in result is evaluated value
         # the second item is true when value was substituted
         if isinstance(data, (float, int, bool)):
@@ -241,8 +294,12 @@ class MetaYaml(object):
         substituted = False
         if isinstance(data, dict):
             for key, value in list(data.items()):
-                evaluated_key = self.eval_value(key, _path(path, key), global_data, False)
-                evaluated_value, changed = self.eval_expression(value, global_data, _path(path, key), eager=eager)
+                evaluated_key = self.eval_value(
+                    key, _path(path, key), global_data, False
+                )
+                evaluated_value, changed = self.eval_expression(
+                    value, global_data, _path(path, key), eager=eager
+                )
                 substituted |= changed
                 if key != evaluated_key:
                     data.pop(key)
@@ -252,8 +309,9 @@ class MetaYaml(object):
 
         if isinstance(data, list):
             for index, value in enumerate(data):
-                evaluated_value, changed = self.eval_expression(value, global_data,
-                                                                _path(path, index, index=True), eager)
+                evaluated_value, changed = self.eval_expression(
+                    value, global_data, _path(path, index, index=True), eager
+                )
                 if changed:
                     data[index] = evaluated_value
                     substituted = True
@@ -264,18 +322,25 @@ class MetaYaml(object):
         return self.eval_expression(data, global_data, path, False)
 
 
-def read(yaml_file, defaults=None, extend_key_word="extend", ignore_errors=False,
-         ignore_not_existed_files=False):
+def read(
+    yaml_file,
+    defaults=None,
+    extend_key_word="extend",
+    ignore_errors=False,
+    ignore_not_existed_files=False,
+):
     """
-      Reads and process yaml config files
+    Reads and process yaml config files
 
-      :param yaml_file
-      :type  yaml_file      str or list[str]
-      :param defaults       Dictionary with default values which can be use during parsing yaml files
-      :param extend_key_word  The name of section with list of included files
-      :param ignore_errors  Do not rise exception when value can't be rendered
-      :param ignore_not_existed_files Do not rise exception if the file not found
+    :param yaml_file
+    :type  yaml_file      str or list[str]
+    :param defaults       Dictionary with default values which can be use during parsing yaml files
+    :param extend_key_word  The name of section with list of included files
+    :param ignore_errors  Do not rise exception when value can't be rendered
+    :param ignore_not_existed_files Do not rise exception if the file not found
     """
 
-    m = MetaYaml(yaml_file, defaults, extend_key_word, ignore_errors, ignore_not_existed_files)
+    m = MetaYaml(
+        yaml_file, defaults, extend_key_word, ignore_errors, ignore_not_existed_files
+    )
     return m.data

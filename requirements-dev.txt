@@ -1,0 +1,3 @@
+pytest
+jinja2>=3.0
+PyYAML
